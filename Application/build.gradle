@@ -1,5 +1,3 @@
-
-
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
@@ -35,7 +33,7 @@ android {
 
     defaultConfig {
         applicationId "info.jkjensen.castex"
-        minSdkVersion 23
+        minSdkVersion 24
         targetSdkVersion 26
     }
 

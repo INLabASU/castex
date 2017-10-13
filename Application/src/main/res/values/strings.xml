@@ -17,10 +17,14 @@
     <string name="app_video_attrib">
         &#169; copyright 2008, Blender Foundation / www.bigbuckbunny.org
     </string>
-    <string name="play">Play</string>
     <string name="title_activity_splash">SplashActivity</string>
     <string name="castex">castex</string>
     <string name="enter">enter</string>
     <string name="start_stream">start stream</string>
     <string name="join_stream">join stream</string>
+    <string name="start">Start stream</string>
+    <string name="stop">Stop stream</string>
+    <string name="play">play video</string>
+    <string name="pause">pause video</string>
+    <string name="user_cancelled">User denied screen sharing permission</string>
 </resources>

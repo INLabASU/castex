@@ -6,6 +6,7 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.view.SurfaceHolder
 import info.jkjensen.castex.streamreceiver.ReceiverActivity
+import info.jkjensen.castex.streamtransmitter.TransmitterActivity
 
 import kotlinx.android.synthetic.main.activity_splash.*
 import java.io.IOException
@@ -28,7 +29,7 @@ class SplashActivity : Activity(), SurfaceHolder.Callback {
         holder?.addCallback(this)
 
         broadcastButton.setOnClickListener {
-            startActivity<ReceiverActivity>()
+            startActivity<TransmitterActivity>()
         }
 
         receiverButton.setOnClickListener {
