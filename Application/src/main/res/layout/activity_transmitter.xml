@@ -6,6 +6,13 @@
     android:layout_height="match_parent"
     tools:context="info.jkjensen.castex.streamtransmitter.TransmitterActivity">
 
+    <com.otaliastudios.cameraview.CameraView
+        android:id="@+id/cameraView"
+        android:visibility="gone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:keepScreenOn="true" />
+
     <LinearLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
         android:layout_width="match_parent"
@@ -27,11 +34,27 @@
 
         <VideoView
             android:id="@+id/vid"
+            android:visibility="gone"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1" />
 
+        <WebView
+            android:id="@+id/webView"
+            android:visibility="gone"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <!--<SurfaceView-->
+            <!--android:id="@+id/cameraSurfaceView"-->
+            <!--android:visibility="invisible"-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="match_parent"-->
+            <!--/>-->
+
+        <!-- Not shown for demo -->
         <LinearLayout
+            android:visibility="gone"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal">

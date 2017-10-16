@@ -4,6 +4,8 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.hardware.Camera
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.icu.text.SimpleDateFormat
@@ -21,13 +23,12 @@ import android.os.Environment
 import android.support.v4.app.ActivityCompat
 import android.util.DisplayMetrics
 import android.util.Log
-import android.view.Surface
-import android.view.SurfaceView
-import android.view.View
+import android.view.*
 import android.widget.Button
 import android.widget.Toast
 import android.widget.VideoView
 import info.jkjensen.castex.R
+import kotlinx.android.synthetic.main.activity_transmitter.*
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
@@ -71,6 +72,10 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
     private val currentPacket: DatagramPacket? = null
     private var configSent = false
 
+    private var type:String? = null
+    var mHolder:SurfaceHolder? = null
+    var camera:Camera? = null
+
     private val PORT_OUT = 1900
     //    private final int PORT_OUT = 1900;
 //        private val streamWidth = 1080
@@ -88,13 +93,38 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
             mResultData = savedInstanceState.getParcelable<Intent>(STATE_RESULT_DATA)
         }
 
+        type = intent.getStringExtra("TYPE")
+        Log.d("TransmitterActivity", "type is " + type)
+
+        webView.settings.javaScriptEnabled = true
+        when(type){
+            "WEB" ->{
+                webView.visibility = View.VISIBLE
+                webView.loadUrl("http://www.jkjensen.info")
+            }
+            "FILE" ->{
+                webView.visibility = View.VISIBLE
+                webView.loadUrl("http://drive.google.com/viewerng/viewer?embedded=true&url=http://www.pdf995.com/samples/pdf.pdf")
+            }
+            "VIDEO" ->{
+                vid.visibility = View.VISIBLE
+            }
+            "CAMERA" ->{
+                cameraView.visibility = View.VISIBLE
+//                ActivityCompat.requestPermissions(this,
+//                        arrayOf(Manifest.permission.CAMERA),
+//                        42)
+            }
+        }
+
+
         val metrics = DisplayMetrics()
         windowManager.defaultDisplay.getMetrics(metrics)
         mScreenDensity = metrics.densityDpi
         mMediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager?
 
         videoView = findViewById(R.id.vid)
-        val path = "android.resource://" + getPackageName() + "/" + R.raw.waves
+        val path = "android.resource://" + packageName + "/" + R.raw.trailer
         videoView?.setVideoURI(Uri.parse(path))
         videoView?.start()
         toggleButton = findViewById(R.id.toggleStream)
@@ -105,8 +135,28 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
         startBroadcast()
         val started = Toast.makeText(this, "Started broadcast", Toast.LENGTH_SHORT)
         started.show()
+        startScreenCapture()
     }
 
+//    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+//        when(requestCode){
+//            42->{
+//                if(grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+//                    mHolder = cameraSurfaceView.holder
+//                    mHolder?.addCallback(this)
+//                    mHolder?.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS)
+//                    camera = Camera.open()
+//                    camera?.setPreviewDisplay(mHolder)
+//                    camera?.startPreview()
+//                }
+//            }
+//        }
+//    }
+
+    override fun onResume() {
+        super.onResume()
+        if(type == "CAMERA") cameraView.start()
+    }
 
     private fun startBroadcast() {
 
@@ -289,6 +339,7 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
     public override fun onPause() {
         super.onPause()
         stopScreenCapture()
+        if(type == "CAMERA") cameraView.stop()
     }
 
     public override fun onDestroy() {
@@ -296,6 +347,7 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
         tearDownMediaProjection()
         encoder?.release()
         sock?.close()
+        if(type == "CAMERA") cameraView.destroy()
     }
 
     private fun setUpMediaProjection() {
