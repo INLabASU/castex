@@ -4,9 +4,11 @@ package info.jkjensen.castex.streamreceiver;
 import android.Manifest;
 import android.animation.TimeAnimator;
 import android.app.Activity;
+import android.content.Context;
 import android.graphics.SurfaceTexture;
 import android.media.MediaCodec;
 import android.media.MediaFormat;
+import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
@@ -24,8 +26,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.MulticastSocket;
+import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.Objects;
 import java.util.PriorityQueue;
 
 import info.jkjensen.castex.R;
@@ -36,7 +45,7 @@ import info.jkjensen.castex.R;
  * {@link android.media.MediaCodec} API.
  */
 public class ReceiverActivity extends Activity implements TextureView.SurfaceTextureListener {
-    private final boolean DEBUG = true;
+    private final boolean DEBUG = false;
 
     private final static int QUEUE_INITIAL_SIZE = 50;
 
@@ -55,8 +64,8 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
 
     MenuItem playButton;
     FileOutputStream fileOutputStream = null;
-    DatagramSocket clientSocket;
-    private final int SOCKET_PORT = 1900;
+    MulticastSocket clientSocket;
+    private final int SOCKET_PORT = 4446;
 //    private final int SOCKET_PORT = 4446;
 
 //    private int streamWidth = 1080;
@@ -79,19 +88,53 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
         mPlaybackView = (TextureView) findViewById(R.id.PlaybackView);
         mPlaybackView.setSurfaceTextureListener(this);
         frameTask = new DecodeFrameTask();
+
+        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        WifiManager.MulticastLock multicastLock = wifiManager.createMulticastLock("multicastLock");
+//        multicastLock.setReferenceCounted(true);
+        multicastLock.acquire();
     }
 
     @Override
     public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
         // Set up the UDP socket for receiving data.
         try {
-            clientSocket = new DatagramSocket(SOCKET_PORT);
+            if(clientSocket == null || !clientSocket.isConnected()) {
+                NetworkInterface networkInterface = null;
+                Enumeration<NetworkInterface> nets = NetworkInterface.getNetworkInterfaces();
+                for (NetworkInterface netint : Collections.list(nets))
+                    if(Objects.equals(netint.getName(), "wlan0")) networkInterface = netint;
+                clientSocket = new MulticastSocket(SOCKET_PORT);
+                clientSocket.joinGroup(new InetSocketAddress(InetAddress.getByName("224.0.113.0"), SOCKET_PORT), networkInterface);
+
+                // UNICAST
+//                clientSocket.joinGroup(InetAddress.getByName("224.0.113.0"));
+//                clientSocket.setReuseAddress(true);
+//                clientSocket.bind(new InetSocketAddress(SOCKET_PORT));
+            }
             nalParser = new NALParser();
-        } catch (SocketException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
-        textureReady = true;
+//        textureReady = true;
+
+        ActivityCompat.requestPermissions(
+                this,
+                PERMISSIONS_STORAGE,
+                REQUEST_EXTERNAL_STORAGE
+        );
+
+        Boolean canRun = true;
+//        if(frameTask.getStatus() == AsyncTask.Status.RUNNING){
+//            frameTask.cancel(true);
+//            Log.w("Main", "Can run: " + canRun);
+//        }
+        packetReceiverTask = new PacketReceiverTask();
+        packetReceiverTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+        frameTask = new DecodeFrameTask();
+        frameTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+//        playButton.setEnabled(false);
     }
 
     @Override
@@ -120,10 +163,6 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
     @Override
     protected void onPause() {
         super.onPause();
-        if(mTimeAnimator != null && mTimeAnimator.isRunning()) {
-            mTimeAnimator.end();
-        }
-
     }
 
     @Override
@@ -141,23 +180,23 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.menu_play) {
 //            mAttribView.setVisibility(View.VISIBLE);
-            ActivityCompat.requestPermissions(
-                    this,
-                    PERMISSIONS_STORAGE,
-                    REQUEST_EXTERNAL_STORAGE
-            );
-            if(textureReady){
-                Boolean canRun = true;
-                if(frameTask.getStatus() == AsyncTask.Status.RUNNING){
-                    frameTask.cancel(true);
-                    Log.w("Main", "Can run: " + canRun);
-                }
-                packetReceiverTask = new PacketReceiverTask();
-                packetReceiverTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-                frameTask = new DecodeFrameTask();
-                frameTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-                playButton.setEnabled(false);
-            }
+//            ActivityCompat.requestPermissions(
+//                    this,
+//                    PERMISSIONS_STORAGE,
+//                    REQUEST_EXTERNAL_STORAGE
+//            );
+//            if(textureReady){
+//                Boolean canRun = true;
+//                if(frameTask.getStatus() == AsyncTask.Status.RUNNING){
+//                    frameTask.cancel(true);
+//                    Log.w("Main", "Can run: " + canRun);
+//                }
+//                packetReceiverTask = new PacketReceiverTask();
+//                packetReceiverTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+//                frameTask = new DecodeFrameTask();
+//                frameTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+//                playButton.setEnabled(false);
+//            }
         }
         return true;
     }
@@ -167,19 +206,16 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
     public void startPlayback() {
         startUs = System.nanoTime() / 1000;
 
-        File fileOut = new File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "testFrameOutput.h264");
-        try {
-            Log.d("Main", "Writing to " + fileOut.toString());
-            fileOutputStream = new FileOutputStream(fileOut, true);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
+//        File fileOut = new File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "testFrameOutput.h264");
+//        try {
+//            Log.d("Main", "Writing to " + fileOut.toString());
+//            fileOutputStream = new FileOutputStream(fileOut, true);
+//        } catch (FileNotFoundException e) {
+//            e.printStackTrace();
+//        }
 
         MediaFormat format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC,
                 streamWidth, streamHeight);
-
-//        MediaFormat format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC,
-//                1080, 1794);
         format.setInteger(MediaFormat.KEY_FRAME_RATE, 30);
         format.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 0);
         NALBuffer sps;
@@ -236,7 +272,6 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
                 totaliFrames++;
                 Log.d("iFrame", "Current totals - iframes: " + totaliFrames + ", bytes: " + totaliFrameBytes);
             }
-//            nb.buffer.position(nb.buffer.position() - 4);
             nb.buffer.rewind();
 
             if (nb == null) {
@@ -245,9 +280,8 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
                 return;
             }
 
-//            ByteBuffer frame = nb.buffer.duplicate();
-
             int inputIndex;
+            // TODO: Look into whether we should just continue at this point.
             while ((inputIndex = mediaCodec.dequeueInputBuffer(-1)) < 0) {
                 Log.d("Main", "Input index: " + inputIndex);
             }
@@ -269,7 +303,14 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
 //            if(nb.lastNAL){
 //                flags = MediaCodec.BUFFER_FLAG_END_OF_STREAM;
 //            }
-            mediaCodec.queueInputBuffer(inputIndex, 0, nb.size+1, /*presentationTimeMS*/0, flags);
+            nb.buffer.rewind();
+            int type = nb.buffer.get(4);
+            if((type & 0x1f) == 0x07 || (type & 0x1f) == 0x08){
+                Log.e("SPSPPS", "Found new SPS, PPS");
+                mediaCodec.queueInputBuffer(inputIndex, 0, nb.size, /*presentationTimeMS*/0, MediaCodec.BUFFER_FLAG_CODEC_CONFIG);
+            } else {
+                mediaCodec.queueInputBuffer(inputIndex, 0, nb.size, /*presentationTimeMS*/0, flags);
+            }
 
             MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
             int outputIndex = mediaCodec.dequeueOutputBuffer(info, 0);
@@ -312,8 +353,11 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
                 try {
                     byte[] buff = new byte[100535];
                     dPacket = new DatagramPacket(buff, 100535);
+                    // Some Android devices require you to manually reset data every time or the
+                    // previous data size will be used.
+                    dPacket.setData(buff);
                     clientSocket.receive(dPacket);
-//                    Log.d("PacketReceiver", "Length: " + dPacket.getLength());
+//                      Log.d("PacketReceiver", "Length: " + dPacket.getLength());
                     addToQueue(ByteBuffer.wrap(dPacket.getData(), dPacket.getOffset(), dPacket.getLength()).duplicate());
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -341,23 +385,22 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
         }
     }
 
+
     @Override
     protected void onStop() {
+        super.onStop();
+        if(mTimeAnimator != null && mTimeAnimator.isRunning()) {
+            mTimeAnimator.end();
+        }
+
         if(frameTask != null) {
             frameTask.cancel(true);
         }
         if(packetReceiverTask != null) {
             packetReceiverTask.cancel(true);
         }
-
-        try {
-            if(DEBUG && fileOutputStream != null) fileOutputStream.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         if(mediaCodec != null) {
             mediaCodec.release();
         }
-        super.onStop();
     }
 }

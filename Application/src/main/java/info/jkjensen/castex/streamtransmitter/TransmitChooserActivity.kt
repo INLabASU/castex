@@ -21,7 +21,7 @@ class TransmitChooserActivity:AppCompatActivity(), SurfaceHolder.Callback {
 
 
  private var holder: SurfaceHolder? = null
- private val mediaPlayer: MediaPlayer = MediaPlayer()
+ private var mediaPlayer: MediaPlayer = MediaPlayer()
  var fileUri: Uri? = null
 
  protected override fun onCreate(savedInstanceState:Bundle?) {
@@ -34,6 +34,16 @@ class TransmitChooserActivity:AppCompatActivity(), SurfaceHolder.Callback {
   cameraButton.onClick { openContent("CAMERA") }
   videoButton.onClick { openContent("VIDEO") }
   webButton.onClick { openContent("WEB") }
+ }
+
+ override fun onPause() {
+  super.onPause()
+  mediaPlayer.release()
+ }
+
+ override fun onResume() {
+  super.onResume()
+  mediaPlayer = MediaPlayer()
  }
 
  override fun surfaceCreated(p0: SurfaceHolder?) {

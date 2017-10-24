@@ -15,6 +15,7 @@ import android.media.MediaFormat
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
+import android.net.wifi.WifiManager
 import android.os.AsyncTask
 import android.os.Build
 import android.support.v7.app.AppCompatActivity
@@ -66,7 +67,7 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
     private var encoder: MediaCodec? = null
     private var fileOutputStream: FileOutputStream? = null
 
-    private var sock: DatagramSocket? = null
+    private var sock: MulticastSocket? = null
     private var group1: InetAddress? = null
     private var group2: InetAddress? = null
     private val currentPacket: DatagramPacket? = null
@@ -76,8 +77,11 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
     var mHolder:SurfaceHolder? = null
     var camera:Camera? = null
 
-    private val PORT_OUT = 1900
-    //    private final int PORT_OUT = 1900;
+    // UNICAST
+//    private val PORT_OUT = 1900
+    // MULTICAST
+    private val STREAMING_BIT_RATE = 200000
+    private val PORT_OUT = 4446
 //        private val streamWidth = 1080
 //        private val streamHeight = 1794
 //        private val streamWidth = 750
@@ -87,16 +91,23 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        System.setProperty("java.net.preferIPv4Stack" , "true")
         setContentView(R.layout.activity_transmitter)
         if (savedInstanceState != null) {
             mResultCode = savedInstanceState.getInt(STATE_RESULT_CODE)
             mResultData = savedInstanceState.getParcelable<Intent>(STATE_RESULT_DATA)
         }
 
+        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, TAG)
+        wifiLock.acquire()
+        val multicastLock = wifiManager.createMulticastLock("multicastLock")
+        multicastLock.acquire()
+
         type = intent.getStringExtra("TYPE")
         Log.d("TransmitterActivity", "type is " + type)
 
-        webView.settings.javaScriptEnabled = true
+//        webView.settings.javaScriptEnabled = true
         when(type){
             "WEB" ->{
                 webView.visibility = View.VISIBLE
@@ -104,7 +115,12 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
             }
             "FILE" ->{
                 webView.visibility = View.VISIBLE
-                webView.loadUrl("http://drive.google.com/viewerng/viewer?embedded=true&url=http://www.pdf995.com/samples/pdf.pdf")
+                webView.loadUrl("android.resource://" + packageName + "/" + R.raw.pdf)
+
+//                val intent = Intent()
+//                intent.action = Intent.ACTION_VIEW
+//                intent.setDataAndType(Uri.parse("android.resource://" + packageName + "/" + R.raw.pdf), "application/pdf")
+//                startActivity(intent)
             }
             "VIDEO" ->{
                 vid.visibility = View.VISIBLE
@@ -161,12 +177,25 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
     private fun startBroadcast() {
 
         try {
-            sock = DatagramSocket(4445)
+
+            // MULTICAST
+            var networkInterface:NetworkInterface? = null
+            val nets = NetworkInterface.getNetworkInterfaces()
+            for (netint in Collections.list(nets))
+                if(netint.name == "wlan0") networkInterface = netint
+            sock = MulticastSocket(4445)
+            sock?.`interface` = networkInterface?.inetAddresses?.nextElement()
+            group1 = InetAddress.getByName("224.0.113.0")
+
+            // UNICAST
+//            sock = DatagramSocket(4445)
+
+
             // Connect to the transmitting device IP.
             // PIXEL HOST DEVICE
             //            group1 = InetAddress.getByName("224.0.113.0"); // For multicast
             //            group1 = InetAddress.getByName("192.168.43.6"); // OnePlus 5
-            group1 = InetAddress.getByName("192.168.43.110") // Samsung Galaxy S7
+//            group1 = InetAddress.getByName("192.168.43.110") // Samsung Galaxy S7
             //            group2 = InetAddress.getByName("192.168.43.37"); // Jk iPhone
             //            group2 = InetAddress.getByName("192.168.43.137"); // Moto E4
             //            group1 = InetAddress.getByName("192.168.43.81"); // Lab iPhone
@@ -175,6 +204,9 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
             // E4 HOST DEVICE
             //            group1 = InetAddress.getByName("192.168.43.7"); // Pixel
             //            group1 = InetAddress.getByName("192.168.43.37"); // Jk iPhone
+
+            // Oneplus 5 HOST DEVICE
+//            group1 = InetAddress.getByName("192.168.43.110") // Galaxy S7
 
         } catch (e: SocketException) {
             e.printStackTrace()
@@ -208,7 +240,7 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
             //                    width, height);
             val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC,
                     streamWidth, streamHeight)
-            format.setInteger(MediaFormat.KEY_BIT_RATE, 350000)
+            format.setInteger(MediaFormat.KEY_BIT_RATE, STREAMING_BIT_RATE)
             format.setInteger(MediaFormat.KEY_FRAME_RATE, 30)
             format.setInteger(MediaFormat.KEY_COLOR_FORMAT,
                     MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
@@ -251,9 +283,10 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
                         Log.d(TAG, "Wrote " + outputBuffer.limit() + " bytes.")
 
                         val broadcastTask = BroadcastTask(DatagramPacket(buf.array(), outputBuffer.limit(), group1, PORT_OUT))
-                        val broadcastTask2 = BroadcastTask(DatagramPacket(buf.array(), outputBuffer.limit(), group2, PORT_OUT))
                         broadcastTask.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
-                        broadcastTask2.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
+                        // Multicast iterative approach
+//                        val broadcastTask2 = BroadcastTask(DatagramPacket(buf.array(), outputBuffer.limit(), group2, PORT_OUT))
+//                        broadcastTask2.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
                     } else {
                         return
                     }
@@ -277,13 +310,14 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
                     val sps = format.getByteBuffer("csd-0")
                     val pps = format.getByteBuffer("csd-1")
                     val spsTask = BroadcastTask(DatagramPacket(sps.array(), sps.limit(), group1, PORT_OUT))
-                    val spsTask2 = BroadcastTask(DatagramPacket(sps.array(), sps.limit(), group2, PORT_OUT))
+//                    val spsTask2 = BroadcastTask(DatagramPacket(sps.array(), sps.limit(), group2, PORT_OUT))
                     val ppsTask = BroadcastTask(DatagramPacket(pps.array(), pps.limit(), group1, PORT_OUT))
-                    val ppsTask2 = BroadcastTask(DatagramPacket(pps.array(), pps.limit(), group2, PORT_OUT))
+//                    val ppsTask2 = BroadcastTask(DatagramPacket(pps.array(), pps.limit(), group2, PORT_OUT))
                     spsTask.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
                     ppsTask.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
-                    spsTask2.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
-                    ppsTask2.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
+                    // Multicast iterative approach
+//                    spsTask2.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
+//                    ppsTask2.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
                     configSent = true
                 }
             })
