@@ -80,7 +80,7 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
     // UNICAST
 //    private val PORT_OUT = 1900
     // MULTICAST
-    private val STREAMING_BIT_RATE = 200000
+    private val STREAMING_BIT_RATE = 370000
     private val PORT_OUT = 4446
 //        private val streamWidth = 1080
 //        private val streamHeight = 1794

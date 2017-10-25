@@ -251,7 +251,6 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
                 mediaCodec = MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
                 mediaCodec.configure(format, new Surface(mPlaybackView.getSurfaceTexture()), null, 0);
                 mediaCodec.start();
-                textureReady = true;
                 break;
             } catch (IOException e) {
                 e.printStackTrace();
@@ -262,14 +261,18 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
         long totaliFrameBytes = 0;
         long totaliFrames = 0;
 
+        Boolean isIFrame = false;
         while(true) {
 
             while(peekQueue() == null);
             NALBuffer nb = nalParser.getNext(pollQueue());
 
-            if((nb.buffer.get(4) & 0x1f) == 0x05){
+            int type = nb.buffer.get(4);
+
+            if((type & 0x1f) == 0x05){
                 totaliFrameBytes += nb.buffer.limit();
                 totaliFrames++;
+                isIFrame = true;
                 Log.d("iFrame", "Current totals - iframes: " + totaliFrames + ", bytes: " + totaliFrameBytes);
             }
             nb.buffer.rewind();
@@ -285,7 +288,7 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
             while ((inputIndex = mediaCodec.dequeueInputBuffer(-1)) < 0) {
                 Log.d("Main", "Input index: " + inputIndex);
             }
-            Log.d("Main", "Final Input index: " + inputIndex);
+//            Log.d("Main", "Final Input index: " + inputIndex);
 
             ByteBuffer codecBuffer = mediaCodec.getInputBuffer(inputIndex);
             codecBuffer.put(nb.buffer);
@@ -303,13 +306,11 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
 //            if(nb.lastNAL){
 //                flags = MediaCodec.BUFFER_FLAG_END_OF_STREAM;
 //            }
-            nb.buffer.rewind();
-            int type = nb.buffer.get(4);
             if((type & 0x1f) == 0x07 || (type & 0x1f) == 0x08){
                 Log.e("SPSPPS", "Found new SPS, PPS");
                 mediaCodec.queueInputBuffer(inputIndex, 0, nb.size, /*presentationTimeMS*/0, MediaCodec.BUFFER_FLAG_CODEC_CONFIG);
             } else {
-                mediaCodec.queueInputBuffer(inputIndex, 0, nb.size, /*presentationTimeMS*/0, flags);
+                mediaCodec.queueInputBuffer(inputIndex, 0, nb.size, /*presentationTimeMS*/0, isIFrame ? MediaCodec.BUFFER_FLAG_KEY_FRAME : flags);
             }
 
             MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
@@ -317,6 +318,7 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
             if (outputIndex >= 0) {
                 mediaCodec.releaseOutputBuffer(outputIndex, true);
             }
+            isIFrame = false;
         }
     }
 
