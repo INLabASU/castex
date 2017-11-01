@@ -4,7 +4,6 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.hardware.Camera
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
@@ -28,6 +27,7 @@ import android.view.*
 import android.widget.Button
 import android.widget.Toast
 import android.widget.VideoView
+import info.jkjensen.castex.Preferences
 import info.jkjensen.castex.R
 import kotlinx.android.synthetic.main.activity_transmitter.*
 import java.io.File
@@ -39,8 +39,9 @@ import java.nio.ByteBuffer
 import java.util.*
 
 class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
-
     private val TAG = "ScreenCaptureFragment"
+    // Flag for whether to write encoder output to a file on device for debugging.
+    private val DEBUG_WRITE_TO_FILE = false
 
     private val REQUEST_EXTERNAL_STORAGE = 1
     private val PERMISSIONS_STORAGE = arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -50,7 +51,7 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
 
     private val REQUEST_MEDIA_PROJECTION = 1
 
-    private var mScreenDensity: Int = 0
+    private var screenDensity: Int = 0
 
     private var mResultCode: Int = 0
     private var mResultData: Intent? = null
@@ -58,7 +59,7 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
     private var mSurface: Surface? = null
     private var mMediaProjection: MediaProjection? = null
     private var mVirtualDisplay: VirtualDisplay? = null
-    private var mMediaProjectionManager: MediaProjectionManager? = null
+    private var mediaProjectionManager: MediaProjectionManager? = null
     private var toggleButton: Button? = null
     private var playPauseButton: Button? = null
     private val mSurfaceView: SurfaceView? = null
@@ -70,44 +71,63 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
     private var sock: MulticastSocket? = null
     private var group1: InetAddress? = null
     private var group2: InetAddress? = null
-    private val currentPacket: DatagramPacket? = null
     private var configSent = false
+    private var metrics:DisplayMetrics = DisplayMetrics()
 
     private var type:String? = null
-    var mHolder:SurfaceHolder? = null
-    var camera:Camera? = null
 
-    // UNICAST
-//    private val PORT_OUT = 1900
-    // MULTICAST
-    private val STREAMING_BIT_RATE = 370000
-    private val PORT_OUT = 4446
+    private val STREAMING_BIT_RATE = 220000
+    private val STREAMING_FRAME_RATE = 30
+    // ms to wait before repeating the same frame again if no change
+    // see https://developer.android.com/reference/android/media/MediaFormat.html#KEY_REPEAT_PREVIOUS_FRAME_AFTER
+    private val REPEAT_PREVIOUS_FRAME_AFTER = 1000000
+    // iFrame interval in seconds
+    private val I_FRAME_INTERVAL = 1
+    private var PORT_OUT = 1900
 //        private val streamWidth = 1080
 //        private val streamHeight = 1794
-//        private val streamWidth = 750
+//        private val streamWidth = 720
+//        private val streamHeight = 1280
+//        private val streamWidt`h = 750
 //        private val streamHeight = 1334
     private val streamWidth = 360
     private val streamHeight = 640
 
+    private var multicastEnabled:Boolean = false
+    private var debugEnabled:Boolean = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        System.setProperty("java.net.preferIPv4Stack" , "true")
         setContentView(R.layout.activity_transmitter)
+
+        // Configure transmission preferences
+        val sharedPreferences = getSharedPreferences("appConfig", Context.MODE_PRIVATE)
+        multicastEnabled = sharedPreferences.getBoolean(Preferences.KEY_MULTICAST, false)
+        debugEnabled = sharedPreferences.getBoolean(Preferences.KEY_DEBUG, false)
+
+        // Prefer IPv4 over IPv6 so we can do normal network things.
+        System.setProperty("java.net.preferIPv4Stack" , "true")
+
         if (savedInstanceState != null) {
             mResultCode = savedInstanceState.getInt(STATE_RESULT_CODE)
             mResultData = savedInstanceState.getParcelable<Intent>(STATE_RESULT_DATA)
         }
 
-        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        val wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, TAG)
-        wifiLock.acquire()
-        val multicastLock = wifiManager.createMulticastLock("multicastLock")
-        multicastLock.acquire()
+        if(multicastEnabled) {
+            // Configure the OS to allow multicast
+            val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            val wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, TAG)
+            wifiLock.acquire()
+            val multicastLock = wifiManager.createMulticastLock("multicastLock")
+            multicastLock.acquire()
 
+            // Adjust the port for multicast
+            PORT_OUT = 4446
+        }
+
+        // Grab the type of transmission that is occurring
         type = intent.getStringExtra("TYPE")
-        Log.d("TransmitterActivity", "type is " + type)
 
-//        webView.settings.javaScriptEnabled = true
         when(type){
             "WEB" ->{
                 webView.visibility = View.VISIBLE
@@ -116,32 +136,22 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
             "FILE" ->{
                 webView.visibility = View.VISIBLE
                 webView.loadUrl("android.resource://" + packageName + "/" + R.raw.pdf)
-
-//                val intent = Intent()
-//                intent.action = Intent.ACTION_VIEW
-//                intent.setDataAndType(Uri.parse("android.resource://" + packageName + "/" + R.raw.pdf), "application/pdf")
-//                startActivity(intent)
             }
             "VIDEO" ->{
                 vid.visibility = View.VISIBLE
             }
             "CAMERA" ->{
                 cameraView.visibility = View.VISIBLE
-//                ActivityCompat.requestPermissions(this,
-//                        arrayOf(Manifest.permission.CAMERA),
-//                        42)
             }
         }
 
-
-        val metrics = DisplayMetrics()
         windowManager.defaultDisplay.getMetrics(metrics)
-        mScreenDensity = metrics.densityDpi
-        mMediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager?
+        screenDensity = metrics.densityDpi
+        mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager?
 
         videoView = findViewById(R.id.vid)
-        val path = "android.resource://" + packageName + "/" + R.raw.trailer
-        videoView?.setVideoURI(Uri.parse(path))
+        val videoPath = "android.resource://" + packageName + "/" + R.raw.trailer
+        videoView?.setVideoURI(Uri.parse(videoPath))
         videoView?.start()
         toggleButton = findViewById(R.id.toggleStream)
         toggleButton?.setOnClickListener(this)
@@ -154,179 +164,111 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
         startScreenCapture()
     }
 
-//    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-//        when(requestCode){
-//            42->{
-//                if(grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-//                    mHolder = cameraSurfaceView.holder
-//                    mHolder?.addCallback(this)
-//                    mHolder?.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS)
-//                    camera = Camera.open()
-//                    camera?.setPreviewDisplay(mHolder)
-//                    camera?.startPreview()
-//                }
-//            }
-//        }
-//    }
-
     override fun onResume() {
         super.onResume()
         if(type == "CAMERA") cameraView.start()
+    }
+
+    public override fun onPause() {
+        super.onPause()
+        stopScreenCapture()
+        if(type == "CAMERA") cameraView.stop()
+    }
+
+    public override fun onDestroy() {
+        super.onDestroy()
+        tearDownMediaProjection()
+        encoder?.release()
+        sock?.close()
+        if(type == "CAMERA") cameraView.destroy()
     }
 
     private fun startBroadcast() {
 
         try {
 
-            // MULTICAST
-            var networkInterface:NetworkInterface? = null
-            val nets = NetworkInterface.getNetworkInterfaces()
-            for (netint in Collections.list(nets))
-                if(netint.name == "wlan0") networkInterface = netint
-            sock = MulticastSocket(4445)
-            sock?.`interface` = networkInterface?.inetAddresses?.nextElement()
-            group1 = InetAddress.getByName("224.0.113.0")
+            if(multicastEnabled) {
+                // MULTICAST
+                var networkInterface: NetworkInterface? = null
+                val nets = NetworkInterface.getNetworkInterfaces()
+                for (netint in Collections.list(nets))
+                    if (netint.name == "wlan0") networkInterface = netint
+                sock = MulticastSocket(4445)
+                sock?.`interface` = networkInterface?.inetAddresses?.nextElement()
+                group1 = InetAddress.getByName("224.0.113.0")
+            } else{
+                // We use MulticastSocket still because it is a subclass of DatagramSocket.
+                sock = MulticastSocket(null)
+                sock?.reuseAddress = true
+                sock?.bind(InetSocketAddress(1900))
 
-            // UNICAST
-//            sock = DatagramSocket(4445)
+                // Connect to the transmitting device IP.
+                // PIXEL HOST DEVICE
+//                group1 = InetAddress.getByName("224.0.113.0"); // For multicast
+//                group1 = InetAddress.getByName("192.168.43.6"); // OnePlus 5
+                group1 = InetAddress.getByName("192.168.43.110") // Samsung Galaxy S7
+//                group2 = InetAddress.getByName("192.168.43.37"); // Jk iPhone
+//                group2 = InetAddress.getByName("192.168.43.137"); // Moto E4
+//                group1 = InetAddress.getByName("192.168.43.81"); // Lab iPhone
+                group2 = InetAddress.getByName("192.168.43.13")
 
+                // E4 HOST DEVICE
+//                group1 = InetAddress.getByName("192.168.43.7"); // Pixel
+//                group1 = InetAddress.getByName("192.168.43.37"); // Jk iPhone
 
-            // Connect to the transmitting device IP.
-            // PIXEL HOST DEVICE
-            //            group1 = InetAddress.getByName("224.0.113.0"); // For multicast
-            //            group1 = InetAddress.getByName("192.168.43.6"); // OnePlus 5
-//            group1 = InetAddress.getByName("192.168.43.110") // Samsung Galaxy S7
-            //            group2 = InetAddress.getByName("192.168.43.37"); // Jk iPhone
-            //            group2 = InetAddress.getByName("192.168.43.137"); // Moto E4
-            //            group1 = InetAddress.getByName("192.168.43.81"); // Lab iPhone
-            group2 = InetAddress.getByName("192.168.43.13")
-
-            // E4 HOST DEVICE
-            //            group1 = InetAddress.getByName("192.168.43.7"); // Pixel
-            //            group1 = InetAddress.getByName("192.168.43.37"); // Jk iPhone
-
-            // Oneplus 5 HOST DEVICE
-//            group1 = InetAddress.getByName("192.168.43.110") // Galaxy S7
-
+                // Oneplus 5 HOST DEVICE
+//              group1 = InetAddress.getByName("192.168.43.110") // Galaxy S7
+            }
         } catch (e: SocketException) {
             e.printStackTrace()
         } catch (e: UnknownHostException) {
             e.printStackTrace()
         }
 
-        val displayMetrics = DisplayMetrics()
-        windowManager.defaultDisplay.getMetrics(displayMetrics)
-        val height = displayMetrics.heightPixels
-        val width = displayMetrics.widthPixels
-
-        ActivityCompat.requestPermissions(
-                this,
-                PERMISSIONS_STORAGE,
-                REQUEST_EXTERNAL_STORAGE
-        )
-        // Set up file writing for debugging.
-        val s = SimpleDateFormat("ddMMyyyyhhmmss")
-        val fileOut = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                s.format(Date()) + "testFrameOutput.h264")
-        try {
-            fileOutputStream = FileOutputStream(fileOut, true)
-        } catch (e: FileNotFoundException) {
-            e.printStackTrace()
+        if(debugEnabled && DEBUG_WRITE_TO_FILE) {
+            // Request to write to storage.
+            ActivityCompat.requestPermissions(
+                    this,
+                    PERMISSIONS_STORAGE,
+                    REQUEST_EXTERNAL_STORAGE
+            )
+            // Set up file writing for debugging.
+            val s = SimpleDateFormat("ddMMyyyyhhmmss")
+            val fileOut = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                    s.format(Date()) + "testTransmitterOutput.h264")
+            try {
+                fileOutputStream = FileOutputStream(fileOut, true)
+            } catch (e: FileNotFoundException) {
+                e.printStackTrace()
+            }
         }
 
         try {
+            // Create and configure the encoder
             encoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
-            //            MediaFormat format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC,
-            //                    width, height);
             val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC,
                     streamWidth, streamHeight)
             format.setInteger(MediaFormat.KEY_BIT_RATE, STREAMING_BIT_RATE)
-            format.setInteger(MediaFormat.KEY_FRAME_RATE, 30)
+            format.setInteger(MediaFormat.KEY_FRAME_RATE, STREAMING_FRAME_RATE)
             format.setInteger(MediaFormat.KEY_COLOR_FORMAT,
                     MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
             format.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 0)
-            format.setInteger(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, 1000000)
+            format.setInteger(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, REPEAT_PREVIOUS_FRAME_AFTER)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 format.setInteger(MediaFormat.KEY_LATENCY, 0)
             }
-            format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 5)
+            format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, I_FRAME_INTERVAL)
             format.setInteger(MediaFormat.KEY_PRIORITY, 0x00)
             encoder?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+
             mSurface = MediaCodec.createPersistentInputSurface()
             encoder?.setInputSurface(mSurface)
-            encoder?.setCallback(object : MediaCodec.Callback() {
-                override fun onInputBufferAvailable(codec: MediaCodec, index: Int) {
-
-                }
-
-                override fun onOutputBufferAvailable(codec: MediaCodec, index: Int, info: MediaCodec.BufferInfo) {
-                    // Wait for SPS and PPS frames to be sent first.
-                    if (!configSent) {
-                        codec.releaseOutputBuffer(index, false)
-                        return
-                    }
-
-                    val outputBuffer = codec.getOutputBuffer(index)
-                    //                    try {
-                    val `val`: Int
-                    val buf: ByteBuffer
-
-                    if (outputBuffer != null) {
-                        buf = ByteBuffer.allocate(outputBuffer.limit())
-                        //                            while(outputBuffer.position() < outputBuffer.limit()){
-                        //                                byte cur = outputBuffer.get();
-                        //                                fileOutputStream.write(cur);
-                        //                                buf.put(cur);
-                        //                            }
-                        buf.put(outputBuffer)
-                        buf.flip()
-                        Log.d(TAG, "Wrote " + outputBuffer.limit() + " bytes.")
-
-                        val broadcastTask = BroadcastTask(DatagramPacket(buf.array(), outputBuffer.limit(), group1, PORT_OUT))
-                        broadcastTask.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
-                        // Multicast iterative approach
-//                        val broadcastTask2 = BroadcastTask(DatagramPacket(buf.array(), outputBuffer.limit(), group2, PORT_OUT))
-//                        broadcastTask2.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
-                    } else {
-                        return
-                    }
-
-                    codec.releaseOutputBuffer(index, false)
-                    //                    } catch (IOException e) {
-                    //                        e.printStackTrace();
-                    //                    }
-
-                }
-
-                override fun onError(codec: MediaCodec, e: MediaCodec.CodecException) {
-
-                }
-
-                override fun onOutputFormatChanged(codec: MediaCodec, format: MediaFormat) {
-                    Log.d(TAG, "Updated output format! New height:"
-                            + format.getInteger(MediaFormat.KEY_HEIGHT) + " new width: " +
-                            format.getInteger(MediaFormat.KEY_WIDTH))
-
-                    val sps = format.getByteBuffer("csd-0")
-                    val pps = format.getByteBuffer("csd-1")
-                    val spsTask = BroadcastTask(DatagramPacket(sps.array(), sps.limit(), group1, PORT_OUT))
-//                    val spsTask2 = BroadcastTask(DatagramPacket(sps.array(), sps.limit(), group2, PORT_OUT))
-                    val ppsTask = BroadcastTask(DatagramPacket(pps.array(), pps.limit(), group1, PORT_OUT))
-//                    val ppsTask2 = BroadcastTask(DatagramPacket(pps.array(), pps.limit(), group2, PORT_OUT))
-                    spsTask.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
-                    ppsTask.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
-                    // Multicast iterative approach
-//                    spsTask2.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
-//                    ppsTask2.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
-                    configSent = true
-                }
-            })
+            encoder?.setCallback(CastexEncoderCallback())
             encoder?.start()
-        }// Set the encoder priority to realtime.
+        }
         catch (e: IOException) {
             e.printStackTrace()
         }
-
     }
 
     public override fun onSaveInstanceState(outState: Bundle?) {
@@ -370,29 +312,13 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
         }
     }
 
-    public override fun onPause() {
-        super.onPause()
-        stopScreenCapture()
-        if(type == "CAMERA") cameraView.stop()
-    }
-
-    public override fun onDestroy() {
-        super.onDestroy()
-        tearDownMediaProjection()
-        encoder?.release()
-        sock?.close()
-        if(type == "CAMERA") cameraView.destroy()
-    }
-
     private fun setUpMediaProjection() {
-        mMediaProjection = mMediaProjectionManager?.getMediaProjection(mResultCode, mResultData)
+        mMediaProjection = mediaProjectionManager?.getMediaProjection(mResultCode, mResultData)
     }
 
     private fun tearDownMediaProjection() {
-//        if (mMediaProjection != null) {
             mMediaProjection?.stop()
             mMediaProjection = null
-//        }
     }
 
     private fun startScreenCapture() {
@@ -405,21 +331,16 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
             setUpMediaProjection()
             setUpVirtualDisplay()
         } else {
-            Log.i(TAG, "Requesting confirmation")
             // This initiates a prompt dialog for the user to confirm screen projection.
             startActivityForResult(
-                    mMediaProjectionManager?.createScreenCaptureIntent(),
+                    mediaProjectionManager?.createScreenCaptureIntent(),
                     REQUEST_MEDIA_PROJECTION)
         }
     }
 
     private fun setUpVirtualDisplay() {
-        //        mVirtualDisplay = mMediaProjection.createVirtualDisplay("ScreenCapture",
-        //                mSurfaceView.getWidth(), mSurfaceView.getHeight(), mScreenDensity,
-        //                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-        //                mSurface, null, null);
         mVirtualDisplay = mMediaProjection?.createVirtualDisplay("ScreenCapture",
-                streamWidth, streamHeight, mScreenDensity,
+                streamWidth, streamHeight, screenDensity,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 mSurface, null, null)
 
@@ -439,7 +360,11 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
 
         override fun doInBackground(vararg strings: String): String? {
             try {
-                sock?.send(packetOut)
+                if(multicastEnabled){
+                    sock?.send(packetOut)
+                } else{
+                    sock?.send(packetOut)
+                }
             } catch (e: IOException) {
                 e.printStackTrace()
             }
@@ -448,5 +373,70 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
         }
 
         override fun onPostExecute(result: String) {}
+    }
+
+    private inner class CastexEncoderCallback: MediaCodec.Callback() {
+        override fun onInputBufferAvailable(codec: MediaCodec, index: Int) {}
+
+        override fun onOutputBufferAvailable(codec: MediaCodec, index: Int, info: MediaCodec.BufferInfo) {
+            // Wait for SPS and PPS frames to be sent first.
+            if (!configSent) {
+                codec.releaseOutputBuffer(index, false)
+                return
+            }
+
+            val outputBuffer = codec.getOutputBuffer(index)
+            val buf: ByteBuffer
+
+            if (outputBuffer != null) {
+                buf = ByteBuffer.allocate(outputBuffer.limit())
+                if(debugEnabled && DEBUG_WRITE_TO_FILE) {
+                    fileOutputStream!!.write((outputBuffer.limit().toString() + "\n").toByteArray())
+                }
+                while (outputBuffer.position() < outputBuffer.limit()) {
+                    val cur:Byte = outputBuffer.get()
+//                        fileOutputStream!!.write(cur as Int)
+                    buf.put(cur)
+                }
+                buf.put(outputBuffer)
+                buf.flip()
+
+                Log.d(TAG, "Sending packet of size: " + outputBuffer.limit().toString() )
+                val broadcastTask = BroadcastTask(DatagramPacket(buf.array(), outputBuffer.limit(), group1, PORT_OUT))
+                broadcastTask.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
+
+                if(!multicastEnabled) {
+                    // Pseudo-multicast iterative approach
+                        val broadcastTask2 = BroadcastTask(DatagramPacket(buf.array(), outputBuffer.limit(), group2, PORT_OUT))
+                        broadcastTask2.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
+                }
+            } else {
+                return
+            }
+
+            codec.releaseOutputBuffer(index, false)
+        }
+
+        override fun onOutputFormatChanged(codec: MediaCodec, format: MediaFormat) {
+            Log.d(TAG, "Updated output format! New height:"
+                    + format.getInteger(MediaFormat.KEY_HEIGHT) + " new width: " +
+                    format.getInteger(MediaFormat.KEY_WIDTH))
+
+            val sps = format.getByteBuffer("csd-0")
+            val pps = format.getByteBuffer("csd-1")
+            val spsTask = BroadcastTask(DatagramPacket(sps.array(), sps.limit(), group1, PORT_OUT))
+            val ppsTask = BroadcastTask(DatagramPacket(pps.array(), pps.limit(), group1, PORT_OUT))
+            spsTask.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
+            ppsTask.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
+            if(!multicastEnabled) {
+                val spsTask2 = BroadcastTask(DatagramPacket(sps.array(), sps.limit(), group2, PORT_OUT))
+                val ppsTask2 = BroadcastTask(DatagramPacket(pps.array(), pps.limit(), group2, PORT_OUT))
+                spsTask2.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
+                ppsTask2.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
+            }
+            configSent = true
+        }
+
+        override fun onError(codec: MediaCodec, e: MediaCodec.CodecException) {}
     }
 }

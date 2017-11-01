@@ -2,19 +2,19 @@ package info.jkjensen.castex
 
 import android.os.Bundle
 import android.app.Activity
+import android.content.Context
+import android.content.SharedPreferences
 import android.media.MediaPlayer
 import android.net.Uri
 import android.util.Log
 import android.view.SurfaceHolder
 import info.jkjensen.castex.streamreceiver.ReceiverActivity
 import info.jkjensen.castex.streamtransmitter.TransmitChooserActivity
-import info.jkjensen.castex.streamtransmitter.TransmitterActivity
 
 import kotlinx.android.synthetic.main.activity_splash.*
 import java.io.IOException
 import org.jetbrains.anko.startActivity
 import java.net.NetworkInterface
-import java.net.NetworkInterface.getNetworkInterfaces
 import java.util.*
 
 
@@ -29,6 +29,8 @@ class SplashActivity : Activity(), SurfaceHolder.Callback {
         setContentView(R.layout.activity_splash)
 
 //        val path = "android.resource://" + packageName + "/" + R.raw.waves
+        //Set up app settings
+        initAppPreferences()
 
         holder = videoView.holder
         holder?.addCallback(this)
@@ -40,10 +42,18 @@ class SplashActivity : Activity(), SurfaceHolder.Callback {
         receiverButton.setOnClickListener {
             startActivity<ReceiverActivity>()
         }
-        mainshow()
+        logNetworkInterfaces()
     }
 
-    fun mainshow() {
+    fun initAppPreferences(){
+        val sharedPreferences: SharedPreferences = getSharedPreferences("appConfig", Context.MODE_PRIVATE)
+        val editor:SharedPreferences.Editor = sharedPreferences.edit()
+        editor.putBoolean(Preferences.KEY_DEBUG, Preferences.DEBUG)
+        editor.putBoolean(Preferences.KEY_MULTICAST, Preferences.MULTICAST)
+        editor.apply()
+    }
+
+    fun logNetworkInterfaces() {
         Log.d("Splash", "Here are all network interfaces:")
         val nets = NetworkInterface.getNetworkInterfaces()
         for (netint in Collections.list(nets))
