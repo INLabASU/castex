@@ -36,6 +36,7 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
@@ -386,6 +387,13 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
 
     private class PacketReceiverTask extends AsyncTask<String, String, String> {
         private DatagramPacket dPacket;
+        private long discrepancy = 0;
+        private long prevDiscrepancy = 0;
+        private ArrayList<Integer> framesMissed = new ArrayList<>();
+
+        private int pFrameTotal = 0;
+        private int pFrameCount = 0;
+        private int pFrameAverage = 0;
 
         public PacketReceiverTask(){
         }
@@ -415,10 +423,30 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
                     }
                     ByteBuffer buf = ByteBuffer.wrap(dPacket.getData());
                     int frameNumber = buf.getInt();
-                    if(frameNumber == 1) expectedFrameNumber = 0;
+                    if(frameNumber == 1) {
+                        expectedFrameNumber = 0;
+                        pFrameCount = 0;
+                        pFrameAverage = 0;
+                    }
                     expectedFrameNumber++;
-//                      Log.d("FrameCountTest", "Expected Frame Number: " + expectedFrameNumber + "Frame Number: " + frameNumber);
-                    Log.d("FrameCountTest", "Discrepancy:" + (frameNumber - expectedFrameNumber));
+                    int type = buf.get(8) & 0x1f;
+                    Log.d("FrameSizeTest", "Size:" + dPacket.getLength() + "\nType: " + String.format("0x%02X", type));
+                    if(type == 0x01){
+//                        pFrameCount++;
+//                        pFrameTotal+= dPacket.getLength();
+//                        pFrameAverage = pFrameTotal / pFrameCount;
+//                        Log.d("FrameSizeTest", "Average P Frame Size: " + pFrameAverage);
+                    }else if(type == 0x05){
+                        Log.d("iframesizetest", "Length: " + dPacket.getLength());
+                    }
+
+                    discrepancy = frameNumber - expectedFrameNumber;
+                    if(prevDiscrepancy != discrepancy){
+                        Log.d("FrameCountTest", "Discrepancy:" + (frameNumber - expectedFrameNumber));
+                        framesMissed.add(frameNumber-1);
+                        Log.d("FrameCountTest", framesMissed.toString());
+                        prevDiscrepancy = discrepancy;
+                    }
                     buf.compact();
                     dPacket.setData(buf.array(), buf.arrayOffset(), buf.limit());
                     addToQueue(ByteBuffer.wrap(dPacket.getData(), dPacket.getOffset(), dPacket.getLength()).duplicate());
