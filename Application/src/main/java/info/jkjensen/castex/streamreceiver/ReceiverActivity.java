@@ -400,8 +400,12 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
                     }
                     ByteBuffer buf = ByteBuffer.wrap(dPacket.getData());
                     int frameNumber = buf.getInt();
+                    if(frameNumber == 1) expectedFrameNumber = 0;
                     expectedFrameNumber++;
-                      Log.d("FrameCountTest", "Expected Frame Number: " + expectedFrameNumber + "Frame Number: " + frameNumber);
+//                      Log.d("FrameCountTest", "Expected Frame Number: " + expectedFrameNumber + "Frame Number: " + frameNumber);
+                    Log.d("FrameCountTest", "Discrepancy:" + (frameNumber - expectedFrameNumber));
+                    buf.compact();
+                    dPacket.setData(buf.array(), buf.arrayOffset(), buf.limit());
                     addToQueue(ByteBuffer.wrap(dPacket.getData(), dPacket.getOffset(), dPacket.getLength()).duplicate());
                 } catch (IOException e) {
                     e.printStackTrace();

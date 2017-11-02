@@ -96,6 +96,8 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
     private var multicastEnabled:Boolean = false
     private var debugEnabled:Boolean = false
 
+    private var frameCount = 0
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_transmitter)
@@ -135,7 +137,7 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
             }
             "FILE" ->{
                 webView.visibility = View.VISIBLE
-                webView.loadUrl("android.resource://" + packageName + "/" + R.raw.pdf)
+//                webView.loadUrl("android.resource://" + packageName + "/" + R.raw.pdf)
             }
             "VIDEO" ->{
                 vid.visibility = View.VISIBLE
@@ -389,7 +391,8 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
             val buf: ByteBuffer
 
             if (outputBuffer != null) {
-                buf = ByteBuffer.allocate(outputBuffer.limit())
+                buf = ByteBuffer.allocate(outputBuffer.limit() + 4)
+                buf.putInt(++frameCount)
                 if(debugEnabled && DEBUG_WRITE_TO_FILE) {
                     fileOutputStream!!.write((outputBuffer.limit().toString() + "\n").toByteArray())
                 }
@@ -424,13 +427,21 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
 
             val sps = format.getByteBuffer("csd-0")
             val pps = format.getByteBuffer("csd-1")
-            val spsTask = BroadcastTask(DatagramPacket(sps.array(), sps.limit(), group1, PORT_OUT))
-            val ppsTask = BroadcastTask(DatagramPacket(pps.array(), pps.limit(), group1, PORT_OUT))
+            // Add 4 additional bytes for debugging
+            val spsOut = ByteBuffer.allocate(sps.limit() + 4)
+            val ppsOut = ByteBuffer.allocate(pps.limit() + 4)
+            // Place 4-byte frame count before the actual payload
+            spsOut.putInt(++frameCount)
+            ppsOut.putInt(++frameCount)
+            spsOut.put(sps)
+            ppsOut.put(pps)
+            val spsTask = BroadcastTask(DatagramPacket(spsOut.array(), spsOut.limit(), group1, PORT_OUT))
+            val ppsTask = BroadcastTask(DatagramPacket(ppsOut.array(), ppsOut.limit(), group1, PORT_OUT))
             spsTask.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
             ppsTask.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
             if(!multicastEnabled) {
-                val spsTask2 = BroadcastTask(DatagramPacket(sps.array(), sps.limit(), group2, PORT_OUT))
-                val ppsTask2 = BroadcastTask(DatagramPacket(pps.array(), pps.limit(), group2, PORT_OUT))
+                val spsTask2 = BroadcastTask(DatagramPacket(spsOut.array(), spsOut.limit(), group2, PORT_OUT))
+                val ppsTask2 = BroadcastTask(DatagramPacket(ppsOut.array(), ppsOut.limit(), group2, PORT_OUT))
                 spsTask2.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
                 ppsTask2.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
             }
