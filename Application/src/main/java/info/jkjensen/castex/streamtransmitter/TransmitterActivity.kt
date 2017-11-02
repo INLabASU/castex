@@ -4,7 +4,6 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.hardware.Camera
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.icu.text.SimpleDateFormat
@@ -30,10 +29,7 @@ import android.widget.VideoView
 import info.jkjensen.castex.Preferences
 import info.jkjensen.castex.R
 import kotlinx.android.synthetic.main.activity_transmitter.*
-import java.io.File
-import java.io.FileNotFoundException
-import java.io.FileOutputStream
-import java.io.IOException
+import java.io.*
 import java.net.*
 import java.nio.ByteBuffer
 import java.util.*
@@ -69,6 +65,7 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
     private var fileOutputStream: FileOutputStream? = null
 
     private var sock: MulticastSocket? = null
+    private var tSock: Socket? = null
     private var group1: InetAddress? = null
     private var group2: InetAddress? = null
     private var configSent = false
@@ -95,6 +92,7 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
 
     private var multicastEnabled:Boolean = false
     private var debugEnabled:Boolean = false
+    private var tcpEnabled:Boolean = false
 
     private var frameCount = 0
 
@@ -106,6 +104,7 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
         val sharedPreferences = getSharedPreferences("appConfig", Context.MODE_PRIVATE)
         multicastEnabled = sharedPreferences.getBoolean(Preferences.KEY_MULTICAST, false)
         debugEnabled = sharedPreferences.getBoolean(Preferences.KEY_DEBUG, false)
+        tcpEnabled = sharedPreferences.getBoolean(Preferences.KEY_TCP, false)
 
         // Prefer IPv4 over IPv6 so we can do normal network things.
         System.setProperty("java.net.preferIPv4Stack" , "true")
@@ -115,7 +114,7 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
             mResultData = savedInstanceState.getParcelable<Intent>(STATE_RESULT_DATA)
         }
 
-        if(multicastEnabled) {
+        if(!tcpEnabled && multicastEnabled) {
             // Configure the OS to allow multicast
             val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
             val wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, TAG)
@@ -189,7 +188,10 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
 
         try {
 
-            if(multicastEnabled) {
+            if(tcpEnabled){
+                group1 = InetAddress.getByName("192.168.43.110") // Samsung Galaxy S7
+                tSock = Socket(group1, 1900)
+            }else if(multicastEnabled) {
                 // MULTICAST
                 var networkInterface: NetworkInterface? = null
                 val nets = NetworkInterface.getNetworkInterfaces()
@@ -362,10 +364,13 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
 
         override fun doInBackground(vararg strings: String): String? {
             try {
-                if(multicastEnabled){
-                    sock?.send(packetOut)
-                } else{
-                    sock?.send(packetOut)
+                when {
+                    tcpEnabled -> {
+                        val out = DataOutputStream(tSock?.getOutputStream())
+                        out.write(packetOut.data)
+                    }
+                    multicastEnabled -> sock?.send(packetOut)
+                    else -> sock?.send(packetOut)
                 }
             } catch (e: IOException) {
                 e.printStackTrace()
@@ -408,7 +413,7 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
                 val broadcastTask = BroadcastTask(DatagramPacket(buf.array(), outputBuffer.limit(), group1, PORT_OUT))
                 broadcastTask.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
 
-                if(!multicastEnabled) {
+                if(!multicastEnabled && !tcpEnabled) {
                     // Pseudo-multicast iterative approach
                         val broadcastTask2 = BroadcastTask(DatagramPacket(buf.array(), outputBuffer.limit(), group2, PORT_OUT))
                         broadcastTask2.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
@@ -439,7 +444,7 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
             val ppsTask = BroadcastTask(DatagramPacket(ppsOut.array(), ppsOut.limit(), group1, PORT_OUT))
             spsTask.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
             ppsTask.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)
-            if(!multicastEnabled) {
+            if(!multicastEnabled && !tcpEnabled) {
                 val spsTask2 = BroadcastTask(DatagramPacket(spsOut.array(), spsOut.limit(), group2, PORT_OUT))
                 val ppsTask2 = BroadcastTask(DatagramPacket(ppsOut.array(), ppsOut.limit(), group2, PORT_OUT))
                 spsTask2.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR)

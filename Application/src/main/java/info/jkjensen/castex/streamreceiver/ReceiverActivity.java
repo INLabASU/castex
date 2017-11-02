@@ -21,18 +21,20 @@ import android.view.MenuItem;
 import android.view.Surface;
 import android.view.TextureView;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
-import java.net.SocketException;
+import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Date;
@@ -79,6 +81,7 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
     MenuItem playButton;
     FileOutputStream fileOutputStream = null;
     MulticastSocket clientSocket;
+    Socket tSock;
     private int SOCKET_PORT = 4446;
 
 //    private int streamWidth = 1080;
@@ -92,6 +95,7 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
 
     private Boolean multicastEnabled;
     private Boolean debugEnabled;
+    private Boolean tcpEnabled;
 
     private long expectedFrameNumber = 0;
 
@@ -108,12 +112,13 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
         SharedPreferences sharedPreferences = getSharedPreferences("appConfig", Context.MODE_PRIVATE);
         multicastEnabled = sharedPreferences.getBoolean(Preferences.Companion.getKEY_MULTICAST(), false);
         debugEnabled = sharedPreferences.getBoolean(Preferences.Companion.getKEY_DEBUG(), false);
+        tcpEnabled = sharedPreferences.getBoolean(Preferences.Companion.getKEY_TCP(), false);
 
         mPlaybackView = findViewById(R.id.PlaybackView);
         mPlaybackView.setSurfaceTextureListener(this);
         frameTask = new DecodeFrameTask();
 
-        if(multicastEnabled) {
+        if(!tcpEnabled && multicastEnabled) {
             // Configure OS for multicast
             WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
             WifiManager.MulticastLock multicastLock = wifiManager.createMulticastLock("multicastLock");
@@ -145,7 +150,9 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
         // Set up the UDP socket for receiving data.
         try {
 //            if(clientSocket == null || !clientSocket.isConnected()) {
-                if(multicastEnabled) {
+                if(tcpEnabled){
+                    tSock = new Socket(InetAddress.getByName("192.168.43.110"),1900);
+                }else if(multicastEnabled) {
                     // Get the network interface for proper configuration.
                     NetworkInterface networkInterface = null;
                     Enumeration<NetworkInterface> nets = NetworkInterface.getNetworkInterfaces();
@@ -393,7 +400,15 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
                     // Some Android devices require you to manually reset data every time or the
                     // previous data size will be used.
                     dPacket.setData(buff);
-                    if(multicastEnabled) {
+                    if(tcpEnabled){
+                        ByteBuffer buf = ByteBuffer.wrap(buff);
+                        SocketChannel input = tSock.getChannel();
+                        int n = 0;
+                        while(n >= 0){
+                            n = input.read(buf);
+                        }
+                        dPacket.setData(buf.array());
+                    }else if(multicastEnabled) {
                         clientSocket.receive(dPacket);
                     }else{
                         clientSocket.receive(dPacket);

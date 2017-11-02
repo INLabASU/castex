@@ -50,6 +50,7 @@ class SplashActivity : Activity(), SurfaceHolder.Callback {
         val editor:SharedPreferences.Editor = sharedPreferences.edit()
         editor.putBoolean(Preferences.KEY_DEBUG, Preferences.DEBUG)
         editor.putBoolean(Preferences.KEY_MULTICAST, Preferences.MULTICAST)
+        editor.putBoolean(Preferences.KEY_TCP, Preferences.TCP)
         editor.apply()
     }
 
