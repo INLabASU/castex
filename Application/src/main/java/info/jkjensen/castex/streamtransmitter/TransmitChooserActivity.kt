@@ -95,7 +95,8 @@ class TransmitChooserActivity:AppCompatActivity(), SurfaceHolder.Callback {
    }
    "WEB"-> Log.d("TCA", "Web chosen")
   }
-  startActivity<TransmitterActivity>("TYPE" to type)
+//  startActivity<TransmitterActivity>("TYPE" to type)
+  startActivity<TransmitterActivity2>("TYPE" to type)
  }
 
  private fun getFile(){

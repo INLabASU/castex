@@ -70,7 +70,7 @@
             android:layout_marginBottom="18dp"
             android:padding="12dp"
             android:textAlignment="center"
-            android:text="@string/start_stream"
+            android:text="share screen"
             android:textColor="#fff"
             android:textSize="18sp"
             android:drawablePadding="16dp"

@@ -11,7 +11,7 @@ class Preferences{
          * configuration.
          */
         public val KEY_MULTICAST = "multicast"
-        public val MULTICAST = true
+        public val MULTICAST = false
 
         /**
          * Enables the use of TCP sockets instead of UDP. This will likely improve stream quality

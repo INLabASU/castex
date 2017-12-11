@@ -19,13 +19,14 @@
     android:versionName="1.0">
 
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
+
     <uses-feature android:name="android.hardware.camera" />
     <uses-feature android:name="android.hardware.camera.autofocus" />
 
@@ -33,6 +34,7 @@
     <application
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name">
+        <service android:name="net.majorkernelpanic.streaming.rtsp.RtspServer" />
         <activity
             android:name=".streamreceiver.ReceiverActivity"
             android:label="@string/app_name"
@@ -64,7 +66,12 @@
             android:name=".streamtransmitter.TransmitterActivity"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
-        <activity android:name=".streamtransmitter.TransmitChooserActivity"
+        <activity
+            android:name=".streamtransmitter.TransmitChooserActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
+        <activity
+            android:name=".streamtransmitter.TransmitterActivity2"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
     </application>
