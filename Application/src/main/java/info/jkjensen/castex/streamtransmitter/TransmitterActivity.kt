@@ -52,7 +52,7 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
     private var mResultCode: Int = 0
     private var mResultData: Intent? = null
 
-    private var mSurface: Surface? = null
+    private var inputSurface: Surface? = null
     private var mMediaProjection: MediaProjection? = null
     private var mVirtualDisplay: VirtualDisplay? = null
     private var mediaProjectionManager: MediaProjectionManager? = null
@@ -265,8 +265,8 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
             format.setInteger(MediaFormat.KEY_PRIORITY, 0x00)
             encoder?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
 
-            mSurface = MediaCodec.createPersistentInputSurface()
-            encoder?.setInputSurface(mSurface)
+            inputSurface = MediaCodec.createPersistentInputSurface()
+            encoder?.setInputSurface(inputSurface)
             encoder?.setCallback(CastexEncoderCallback())
             encoder?.start()
         }
@@ -326,7 +326,7 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private fun startScreenCapture() {
-        if (mSurface == null) {
+        if (inputSurface == null) {
             return
         }
         if (mMediaProjection != null) {
@@ -346,7 +346,7 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
         mVirtualDisplay = mMediaProjection?.createVirtualDisplay("ScreenCapture",
                 streamWidth, streamHeight, screenDensity,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                mSurface, null, null)
+                inputSurface, null, null)
 
         toggleButton?.setText(R.string.stop)
     }
