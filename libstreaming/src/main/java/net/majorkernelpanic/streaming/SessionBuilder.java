@@ -31,7 +31,11 @@ import net.majorkernelpanic.streaming.video.VideoQuality;
 import net.majorkernelpanic.streaming.video.VideoStream;
 import android.content.Context;
 import android.hardware.Camera.CameraInfo;
+import android.media.projection.MediaProjection;
+import android.media.projection.MediaProjectionManager;
 import android.preference.PreferenceManager;
+import android.util.DisplayMetrics;
+import android.view.Display;
 
 /**
  * Call {@link #getInstance()} to get access to the SessionBuilder.
@@ -69,6 +73,8 @@ public class SessionBuilder {
 	private int mOrientation = 0;
 	private boolean mFlash = false;
 	private SurfaceView mSurfaceView = null;
+	private MediaProjection mediaProjection = null;
+	private DisplayMetrics metrics = null;
 	private String mOrigin = null;
 	private String mDestination = null;
 	private Session.Callback mCallback = null;
@@ -125,7 +131,12 @@ public class SessionBuilder {
 			session.addVideoTrack(new H263Stream(mCamera));
 			break;
 		case VIDEO_H264:
-			H264Stream stream = new H264Stream(mCamera);
+			int screenDensity = 420;
+			if(metrics != null) {
+				screenDensity = metrics.densityDpi;
+			}
+
+			H264Stream stream = new H264Stream(mCamera, mediaProjection, screenDensity);
 			if (mContext!=null) 
 				stream.setPreferences(PreferenceManager.getDefaultSharedPreferences(mContext));
 			session.addVideoTrack(stream);
@@ -232,6 +243,16 @@ public class SessionBuilder {
 		mCallback = callback;
 		return this;
 	}
+
+	public SessionBuilder setMediaProjection(MediaProjection mp){
+		mediaProjection = mp;
+		return this;
+	}
+
+	public SessionBuilder setDisplayMetrics(DisplayMetrics metrics){
+		this.metrics = metrics;
+		return this;
+	}
 	
 	/** Returns the context set with {@link #setContext(Context)}*/
 	public Context getContext() {
@@ -304,6 +325,8 @@ public class SessionBuilder {
 		.setAudioEncoder(mAudioEncoder)
 		.setAudioQuality(mAudioQuality)
 		.setContext(mContext)
+		.setMediaProjection(mediaProjection)
+		.setDisplayMetrics(metrics)
 		.setCallback(mCallback);
 	}
 

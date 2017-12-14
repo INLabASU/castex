@@ -39,12 +39,16 @@ import android.content.SharedPreferences.Editor;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.Parameters;
+import android.hardware.display.DisplayManager;
+import android.hardware.display.VirtualDisplay;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.MediaRecorder;
+import android.media.projection.MediaProjection;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceHolder;
@@ -67,6 +71,8 @@ public abstract class VideoStream extends MediaStream {
 	protected Camera mCamera;
 	protected Thread mCameraThread;
 	protected Looper mCameraLooper;
+	protected MediaProjection mediaProjection;
+	protected int density;
 
 	protected boolean mCameraOpenedManually = true;
 	protected boolean mFlashEnabled = false;
@@ -97,6 +103,18 @@ public abstract class VideoStream extends MediaStream {
 	public VideoStream(int camera) {
 		super();
 		setCamera(camera);
+	}
+
+	/**
+	 * Don't use this class directly
+	 * @param camera Can be either CameraInfo.CAMERA_FACING_BACK or CameraInfo.CAMERA_FACING_FRONT
+	 */
+	@SuppressLint("InlinedApi")
+	public VideoStream(int camera, MediaProjection mediaProjection, int screenDensity) {
+		super();
+		setCamera(camera);
+		this.mediaProjection = mediaProjection;
+		this.density = screenDensity;
 	}
 
 	/**
@@ -306,6 +324,8 @@ public abstract class VideoStream extends MediaStream {
 			InvalidSurfaceException,
 			RuntimeException {
 
+		// TODO: Add the capability to stream from the screen instead of the camera.
+
 		mCameraOpenedManually = true;
 		if (!mPreviewStarted) {
 			createCamera();
@@ -342,6 +362,7 @@ public abstract class VideoStream extends MediaStream {
 			mMediaRecorder = new MediaRecorder();
 			mMediaRecorder.setCamera(mCamera);
 			//TODO: Add the surface here in addition to the camera.
+//			mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
 			mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
 			mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
 			mMediaRecorder.setVideoEncoder(mVideoEncoder);
@@ -451,7 +472,14 @@ public abstract class VideoStream extends MediaStream {
 		mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT,debugger.getEncoderColorFormat());
 		mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
 		mMediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
-		mMediaCodec.start();
+        Surface inputSurface = MediaCodec.createPersistentInputSurface();
+        mMediaCodec.setInputSurface(inputSurface);
+        mMediaCodec.start();
+
+        VirtualDisplay virtualDisplay = mediaProjection.createVirtualDisplay("ScreenCapture",
+                mQuality.resX, mQuality.resY, density,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                inputSurface, null, null);
 
 		Camera.PreviewCallback callback = new Camera.PreviewCallback() {
 			long now = System.nanoTime()/1000, oldnow = now, i=0;
@@ -490,7 +518,7 @@ public abstract class VideoStream extends MediaStream {
 		// Not sure why this isn't working. Trying to set a hard-coded size
 //		for (int i=0;i<10;i++) mCamera.addCallbackBuffer(new byte[convertor.getBufferSize()]);
 		for (int i=0;i<10;i++) mCamera.addCallbackBuffer(new byte[1843200]);
-		mCamera.setPreviewCallbackWithBuffer(callback);
+//		mCamera.setPreviewCallbackWithBuffer(callback);
 
 		// The packetizer encapsulates the bit stream in an RTP stream and send it over the network
 		mPacketizer.setInputStream(new MediaCodecInputStream(mMediaCodec));

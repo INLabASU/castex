@@ -33,6 +33,7 @@ import android.content.SharedPreferences.Editor;
 import android.graphics.ImageFormat;
 import android.hardware.Camera.CameraInfo;
 import android.media.MediaRecorder;
+import android.media.projection.MediaProjection;
 import android.os.Environment;
 import android.service.textservice.SpellCheckerService.Session;
 import android.util.Base64;
@@ -67,6 +68,20 @@ public class H264Stream extends VideoStream {
 	 */
 	public H264Stream(int cameraId) {
 		super(cameraId);
+		mMimeType = "video/avc";
+		mCameraImageFormat = ImageFormat.NV21;
+		mVideoEncoder = MediaRecorder.VideoEncoder.H264;
+		mPacketizer = new H264Packetizer();
+	}
+
+
+	/**
+	 * Constructs the H.264 stream.
+	 * @param cameraId Can be either CameraInfo.CAMERA_FACING_BACK or CameraInfo.CAMERA_FACING_FRONT
+	 * @throws IOException
+	 */
+	public H264Stream(int cameraId, MediaProjection mediaProjection, int screenDensity) {
+		super(cameraId, mediaProjection, screenDensity);
 		mMimeType = "video/avc";
 		mCameraImageFormat = ImageFormat.NV21;
 		mVideoEncoder = MediaRecorder.VideoEncoder.H264;
