@@ -50,6 +50,7 @@ import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.Display;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceHolder.Callback;
@@ -72,7 +73,8 @@ public abstract class VideoStream extends MediaStream {
 	protected Thread mCameraThread;
 	protected Looper mCameraLooper;
 	protected MediaProjection mediaProjection;
-	protected int density;
+	protected float density;
+	protected DisplayMetrics metrics;
 
 	protected boolean mCameraOpenedManually = true;
 	protected boolean mFlashEnabled = false;
@@ -110,11 +112,12 @@ public abstract class VideoStream extends MediaStream {
 	 * @param camera Can be either CameraInfo.CAMERA_FACING_BACK or CameraInfo.CAMERA_FACING_FRONT
 	 */
 	@SuppressLint("InlinedApi")
-	public VideoStream(int camera, MediaProjection mediaProjection, int screenDensity) {
+	public VideoStream(int camera, MediaProjection mediaProjection, DisplayMetrics metrics) {
 		super();
 		setCamera(camera);
 		this.mediaProjection = mediaProjection;
-		this.density = screenDensity;
+		this.density = metrics.densityDpi;
+		this.metrics = metrics;
 	}
 
 	/**
@@ -477,7 +480,7 @@ public abstract class VideoStream extends MediaStream {
         mMediaCodec.start();
 
         VirtualDisplay virtualDisplay = mediaProjection.createVirtualDisplay("ScreenCapture",
-                mQuality.resX, mQuality.resY, density,
+                metrics.widthPixels, metrics.heightPixels, (int) density,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 inputSurface, null, null);
 

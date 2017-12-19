@@ -136,7 +136,7 @@ public class SessionBuilder {
 				screenDensity = metrics.densityDpi;
 			}
 
-			H264Stream stream = new H264Stream(mCamera, mediaProjection, screenDensity);
+			H264Stream stream = new H264Stream(mCamera, mediaProjection, metrics);
 			if (mContext!=null) 
 				stream.setPreferences(PreferenceManager.getDefaultSharedPreferences(mContext));
 			session.addVideoTrack(stream);
