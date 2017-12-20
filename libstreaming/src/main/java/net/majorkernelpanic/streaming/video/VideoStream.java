@@ -480,43 +480,43 @@ public abstract class VideoStream extends MediaStream {
         mMediaCodec.start();
 
         VirtualDisplay virtualDisplay = mediaProjection.createVirtualDisplay("ScreenCapture",
-                metrics.widthPixels, metrics.heightPixels, (int) density,
+                mQuality.resX, mQuality.resY, (int) density,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 inputSurface, null, null);
 
-		Camera.PreviewCallback callback = new Camera.PreviewCallback() {
-			long now = System.nanoTime()/1000, oldnow = now, i=0;
-			ByteBuffer[] inputBuffers = mMediaCodec.getInputBuffers();
-			@Override
-			public void onPreviewFrame(byte[] data, Camera camera) {
-				oldnow = now;
-				now = System.nanoTime()/1000;
-
-				Camera.Size size = camera.getParameters().getPreviewSize();
-				// TODO: add a check to make sure that data is not null here.
-				if(data == null) return;
-				byte[] data2 = new byte[data.length];
-				rotateNV21(data, data2, size.width, size.height, 90);
-
-				if (i++>3) {
-					i = 0;
-					//Log.d(TAG,"Measured: "+1000000L/(now-oldnow)+" fps.");
-				}
-				try {
-					int bufferIndex = mMediaCodec.dequeueInputBuffer(500000);
-					if (bufferIndex>=0) {
-						inputBuffers[bufferIndex].clear();
-						if (data2 == null) Log.e(TAG,"Symptom of the \"Callback buffer was too small\" problem...");
-						else convertor.convert(data2, inputBuffers[bufferIndex]);
-						mMediaCodec.queueInputBuffer(bufferIndex, 0, inputBuffers[bufferIndex].position(), now, 0);
-					} else {
-						Log.e(TAG,"No buffer available !");
-					}
-				} finally {
-					mCamera.addCallbackBuffer(data2);
-				}
-			}
-		};
+//		Camera.PreviewCallback callback = new Camera.PreviewCallback() {
+//			long now = System.nanoTime()/1000, oldnow = now, i=0;
+//			ByteBuffer[] inputBuffers = mMediaCodec.getInputBuffers();
+//			@Override
+//			public void onPreviewFrame(byte[] data, Camera camera) {
+//				oldnow = now;
+//				now = System.nanoTime()/1000;
+//
+//				Camera.Size size = camera.getParameters().getPreviewSize();
+//				// TODO: add a check to make sure that data is not null here.
+//				if(data == null) return;
+//				byte[] data2 = new byte[data.length];
+//				rotateNV21(data, data2, size.width, size.height, 90);
+//
+//				if (i++>3) {
+//					i = 0;
+//					//Log.d(TAG,"Measured: "+1000000L/(now-oldnow)+" fps.");
+//				}
+//				try {
+//					int bufferIndex = mMediaCodec.dequeueInputBuffer(500000);
+//					if (bufferIndex>=0) {
+//						inputBuffers[bufferIndex].clear();
+//						if (data2 == null) Log.e(TAG,"Symptom of the \"Callback buffer was too small\" problem...");
+//						else convertor.convert(data2, inputBuffers[bufferIndex]);
+//						mMediaCodec.queueInputBuffer(bufferIndex, 0, inputBuffers[bufferIndex].position(), now, 0);
+//					} else {
+//						Log.e(TAG,"No buffer available !");
+//					}
+//				} finally {
+//					mCamera.addCallbackBuffer(data2);
+//				}
+//			}
+//		};
 
 		// Not sure why this isn't working. Trying to set a hard-coded size
 //		for (int i=0;i<10;i++) mCamera.addCallbackBuffer(new byte[convertor.getBufferSize()]);
