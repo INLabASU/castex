@@ -465,11 +465,11 @@ public abstract class VideoStream extends MediaStream {
 			}
 		}
 
-		EncoderDebugger debugger = EncoderDebugger.debug(mSettings, mQuality.resX, mQuality.resY);
+		EncoderDebugger debugger = EncoderDebugger.debug(mSettings, metrics.widthPixels, metrics.heightPixels);
 		final NV21Convertor convertor = debugger.getNV21Convertor();
 
 		mMediaCodec = MediaCodec.createByCodecName(debugger.getEncoderName());
-		MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", mQuality.resX, mQuality.resY);
+		MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", metrics.widthPixels, metrics.heightPixels);
 		mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, mQuality.bitrate);
 		mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mQuality.framerate);
 		mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT,debugger.getEncoderColorFormat());
@@ -480,7 +480,7 @@ public abstract class VideoStream extends MediaStream {
         mMediaCodec.start();
 
         VirtualDisplay virtualDisplay = mediaProjection.createVirtualDisplay("ScreenCapture",
-                mQuality.resX, mQuality.resY, (int) density,
+                metrics.widthPixels, metrics.heightPixels, (int) density,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 inputSurface, null, null);
 
@@ -493,7 +493,6 @@ public abstract class VideoStream extends MediaStream {
 //				now = System.nanoTime()/1000;
 //
 //				Camera.Size size = camera.getParameters().getPreviewSize();
-//				// TODO: add a check to make sure that data is not null here.
 //				if(data == null) return;
 //				byte[] data2 = new byte[data.length];
 //				rotateNV21(data, data2, size.width, size.height, 90);

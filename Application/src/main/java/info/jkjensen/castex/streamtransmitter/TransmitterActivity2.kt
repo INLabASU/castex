@@ -79,7 +79,6 @@ class TransmitterActivity2 : AppCompatActivity(), SurfaceHolder.Callback, Sessio
         val width:Int = displayMetrics.widthPixels
 
 
-
         sessionBuilder = sessionBuilder
                 .setSurfaceView(surfaceView)
                 .setCamera(0)
@@ -92,8 +91,9 @@ class TransmitterActivity2 : AppCompatActivity(), SurfaceHolder.Callback, Sessio
 //                .setVideoQuality(VideoQuality(640,480,30,2000000)) // Supported
 //                .setVideoQuality(VideoQuality(720,480,30,2000000)) // Supported
 //                .setVideoQuality(VideoQuality(800,600,30,2000000)) // Supported
-                .setVideoQuality(VideoQuality(1024,768,30,4000000)) // Supported
+                .setVideoQuality(VideoQuality(768,1024,30,1000000)) // Supported
 //                .setVideoQuality(VideoQuality(1280,960,4,8000000)) // Supported
+//                .setVideoQuality(VideoQuality(1080,1920,30,8000000)) // Supported
 //                .setDestination("192.168.43.19")// mbp
 //                .setDestination("192.168.43.20")// iMac
 //                .setDestination("192.168.43.19")// mbp
