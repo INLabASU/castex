@@ -3,12 +3,15 @@ package info.jkjensen.castex
 import android.os.Bundle
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.media.MediaPlayer
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import android.view.SurfaceHolder
 import info.jkjensen.castex.streamreceiver.ReceiverActivity
+import info.jkjensen.castex.streamtransmitter.ScreenCapturerService
 import info.jkjensen.castex.streamtransmitter.TransmitChooserActivity
 
 import kotlinx.android.synthetic.main.activity_splash.*
@@ -36,7 +39,10 @@ class SplashActivity : Activity(), SurfaceHolder.Callback {
         holder?.addCallback(this)
 
         broadcastButton.setOnClickListener {
-            startActivity<TransmitChooserActivity>()
+//            startActivity<TransmitChooserActivity>()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(Intent(this, ScreenCapturerService::class.java))
+            }
         }
 
         receiverButton.setOnClickListener {

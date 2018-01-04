@@ -27,4 +27,6 @@
     <string name="play">play video</string>
     <string name="pause">pause video</string>
     <string name="user_cancelled">User denied screen sharing permission</string>
+    <string name="notification_title">Castex</string>
+    <string name="notification_message">Sharing screen</string>
 </resources>
