@@ -33,6 +33,12 @@ import org.jetbrains.anko.sdk25.coroutines.onClick
 
 class TransmitterActivity2 : AppCompatActivity(), SurfaceHolder.Callback, Session.Callback {
 
+    companion object {
+        fun testing1(){
+            Log.d("tag","somethign")
+        }
+    }
+
     private val REQUEST_MEDIA_PROJECTION_CODE = 1
     private val REQUEST_CAMERA_CODE = 200
     private val TAG = "TA2"

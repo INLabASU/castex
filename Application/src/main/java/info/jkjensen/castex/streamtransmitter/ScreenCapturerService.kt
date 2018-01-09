@@ -1,9 +1,10 @@
 package info.jkjensen.castex.streamtransmitter
 
-import android.app.IntentService
-import android.app.Notification
+import android.annotation.TargetApi
+import android.app.*
 import android.content.Intent
-import android.app.PendingIntent
+import android.content.Context
+import android.graphics.Color
 import android.os.Build
 import android.support.v4.app.NotificationCompat
 import android.support.v4.app.NotificationManagerCompat.IMPORTANCE_LOW
@@ -18,16 +19,17 @@ import info.jkjensen.castex.R
 class ScreenCapturerService: IntentService("ScreenCaptureService") {
     private val ONGOING_NOTIFICATION_IDENTIFIER = 1
 
+    @TargetApi(Build.VERSION_CODES.O)
     override fun onCreate() {
 
         val notificationIntent = Intent(this, TransmitterActivity2::class.java)
         val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0)
 
         val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Notification.Builder(this, "ScreenSharingNotification")
+            Notification.Builder(this, CastexNotification.id)
                     .setContentTitle(getText(R.string.notification_title))
                     .setContentText(getText(R.string.notification_message))
-    //                .setSmallIcon(R.drawable.abc_ic_star_black_16dp)
+                    .setSmallIcon(R.drawable.abc_ic_star_black_16dp)
                     .setContentIntent(pendingIntent)
                     .setTicker(getText(R.string.notification_message))
                     .build()
@@ -38,7 +40,7 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
         startForeground(ONGOING_NOTIFICATION_IDENTIFIER, notification)
         Log.d("ScreenCaptureService", "Service started.")
 
-        Toast.makeText(this, "woo", Toast.LENGTH_LONG).show()
+//        Toast.makeText(this, "woo", Toast.LENGTH_LONG).show()
         super.onCreate()
     }
 
@@ -46,7 +48,7 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
 
 
         try{
-            Thread.sleep(15000)
+            Thread.sleep(5000)
         }catch (e:InterruptedException){
             Thread.currentThread().interrupt()
         }
