@@ -519,7 +519,7 @@ public abstract class VideoStream extends MediaStream {
 
 		// Not sure why this isn't working. Trying to set a hard-coded size
 //		for (int i=0;i<10;i++) mCamera.addCallbackBuffer(new byte[convertor.getBufferSize()]);
-		for (int i=0;i<10;i++) mCamera.addCallbackBuffer(new byte[1843200]);
+//		for (int i=0;i<10;i++) mCamera.addCallbackBuffer(new byte[1843200]);
 //		mCamera.setPreviewCallbackWithBuffer(callback);
 
 		// The packetizer encapsulates the bit stream in an RTP stream and send it over the network
@@ -528,46 +528,6 @@ public abstract class VideoStream extends MediaStream {
 
 		mStreaming = true;
 
-	}
-
-	public static void rotateNV21(byte[] input, byte[] output, int width, int height, int rotation) {
-		boolean swap = (rotation == 90 || rotation == 270);
-		boolean yflip = (rotation == 90 || rotation == 180);
-		boolean xflip = (rotation == 270 || rotation == 180);
-		for (int x = 0; x < width; x++) {
-			for (int y = 0; y < height; y++) {
-				int xo = x, yo = y;
-				int w = width, h = height;
-				int xi = xo, yi = yo;
-				if (swap) {
-					xi = w * yo / h;
-					yi = h * xo / w;
-				}
-				if (yflip) {
-					yi = h - yi - 1;
-				}
-				if (xflip) {
-					xi = w - xi - 1;
-				}
-				output[w * yo + xo] = input[w * yi + xi];
-				int fs = w * h;
-				int qs = (fs >> 2);
-				xi = (xi >> 1);
-				yi = (yi >> 1);
-				xo = (xo >> 1);
-				yo = (yo >> 1);
-				w = (w >> 1);
-				h = (h >> 1);
-				// adjust for interleave here
-				int ui = fs + (w * yi + xi) * 2;
-				int uo = fs + (w * yo + xo) * 2;
-				// and here
-				int vi = ui + 1;
-				int vo = uo + 1;
-				output[uo] = input[ui];
-				output[vo] = input[vi];
-			}
-		}
 	}
 
 	/**
@@ -740,9 +700,9 @@ public abstract class VideoStream extends MediaStream {
 		parameters.setPreviewFpsRange(max[0], max[1]);
 
 		try {
-			mCamera.setParameters(parameters);
-			mCamera.setDisplayOrientation(mOrientation);
-			mCamera.startPreview();
+//			mCamera.setParameters(parameters);
+//			mCamera.setDisplayOrientation(mOrientation);
+			mCamera.startPreview(); // I can't figure out why, but this needs to stay here.
 			mPreviewStarted = true;
 			mUpdated = true;
 		} catch (RuntimeException e) {
@@ -784,26 +744,26 @@ public abstract class VideoStream extends MediaStream {
 	private void measureFramerate() {
 		final Semaphore lock = new Semaphore(0);
 
-		final Camera.PreviewCallback callback = new Camera.PreviewCallback() {
-			int i = 0, t = 0;
-			long now, oldnow, count = 0;
-			@Override
-			public void onPreviewFrame(byte[] data, Camera camera) {
-				i++;
-				now = System.nanoTime()/1000;
-				if (i>3) {
-					t += now - oldnow;
-					count++;
-				}
-				if (i>20) {
-					mQuality.framerate = (int) (1000000/(t/count)+1);
-					lock.release();
-				}
-				oldnow = now;
-			}
-		};
+//		final Camera.PreviewCallback callback = new Camera.PreviewCallback() {
+//			int i = 0, t = 0;
+//			long now, oldnow, count = 0;
+//			@Override
+//			public void onPreviewFrame(byte[] data, Camera camera) {
+////				i++;
+////				now = System.nanoTime()/1000;
+////				if (i>3) {
+////					t += now - oldnow;
+////					count++;
+////				}
+////				if (i>20) {
+////					mQuality.framerate = (int) (1000000/(t/count)+1);
+////					lock.release();
+////				}
+////				oldnow = now;
+//			}
+//		};
 
-		mCamera.setPreviewCallback(callback);
+//		mCamera.setPreviewCallback(callback);
 
 		try {
 			lock.tryAcquire(2,TimeUnit.SECONDS);
@@ -815,7 +775,7 @@ public abstract class VideoStream extends MediaStream {
 			}
 		} catch (InterruptedException e) {}
 
-		mCamera.setPreviewCallback(null);
+//		mCamera.setPreviewCallback(null);
 
 	}
 

@@ -43,10 +43,10 @@ class SplashActivity : Activity(), SurfaceHolder.Callback {
         holder?.addCallback(this)
 
         broadcastButton.setOnClickListener {
-//            startActivity<TransmitChooserActivity>()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(Intent(this, ScreenCapturerService::class.java))
-            }
+            startActivity<TransmitChooserActivity>()
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//                startForegroundService(Intent(this, ScreenCapturerService::class.java))
+//            }
         }
 
         receiverButton.setOnClickListener {

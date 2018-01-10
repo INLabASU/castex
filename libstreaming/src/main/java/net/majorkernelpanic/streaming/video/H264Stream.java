@@ -146,7 +146,7 @@ public class H264Stream extends VideoStream {
 			return new MP4Config(debugger.getB64SPS(), debugger.getB64PPS());
 		} catch (Exception e) {
 			// Fallback on the old streaming method using the MediaRecorder API
-			Log.e(TAG,"Resolution not supported with the MediaCodec API, we fallback on the old streamign method.");
+			Log.e(TAG,"Resolution not supported with the MediaCodec API, we fallback on the old streaming method.");
 			mMode = MODE_MEDIARECORDER_API;
 			return testH264();
 		}
