@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<net.majorkernelpanic.streaming.gl.SurfaceView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent">
+<RelativeLayout  xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_height="wrap_content"
+    android:layout_width="wrap_content">
 
-</net.majorkernelpanic.streaming.gl.SurfaceView>
+    <net.majorkernelpanic.streaming.gl.SurfaceView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/surface_view_fake" />
+</RelativeLayout>

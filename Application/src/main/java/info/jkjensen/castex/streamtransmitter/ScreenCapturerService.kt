@@ -5,6 +5,7 @@ import android.app.*
 import android.content.Intent
 import android.content.Context
 import android.graphics.Color
+import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.projection.MediaProjection
@@ -17,8 +18,10 @@ import android.support.v4.app.NotificationCompat
 import android.support.v4.app.NotificationManagerCompat.IMPORTANCE_LOW
 import android.util.DisplayMetrics
 import android.util.Log
+import android.view.SurfaceHolder
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.view.WindowManager
+import android.widget.RelativeLayout
 import android.widget.Toast
 import info.jkjensen.castex.R
 import kotlinx.android.synthetic.main.activity_transmitter_2.*
@@ -101,22 +104,33 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
 
         var virtualDisplay: VirtualDisplay? = null
 
-        val layout:SurfaceView = layoutInflater.inflate(R.layout.bg_surface_view, null) as SurfaceView
-        val params = WindowManager.LayoutParams()
-        params.width = WRAP_CONTENT
-        params.height = WRAP_CONTENT
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            params.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        }else{
-            params.type = WindowManager.LayoutParams.TYPE_PHONE
-        }
-        (getSystemService(Context.WINDOW_SERVICE) as WindowManager).addView(layout, params)
+        val layout:RelativeLayout = layoutInflater.inflate(R.layout.bg_surface_view, null) as RelativeLayout
+        val params = WindowManager.LayoutParams(1,1,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+                PixelFormat.TRANSLUCENT)
+//        val params = WindowManager.LayoutParams()
+//        params.width = 1
+//        params.height = 1
+//        params.format = PixelFormat.TRANSLUCENT
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//            params.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+//        }else{
+//            params.type = WindowManager.LayoutParams.TYPE_PHONE
+//        }
+        val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        wm.addView(layout, params)
 
+        val svf:SurfaceView = layout.findViewById(R.id.surface_view_fake)
+        val sh:SurfaceHolder = svf.holder
+        svf.setZOrderOnTop(true)
+        sh.setFormat(PixelFormat.TRANSPARENT)
 
         sessionBuilder = sessionBuilder
+                .setContext(applicationContext)
                 .setSurfaceView(TransmitterActivity2.sv)
-//                .setSurfaceView(layout)
-                .setCamera(0)
+//                .setSurfaceView(svf)
+                .setCamera(1)
                 .setPreviewOrientation(90)
                 .setContext(applicationContext)
                 .setAudioEncoder(SessionBuilder.AUDIO_NONE)
@@ -161,7 +175,7 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
         session = sessionBuilder.build()
         session!!.videoTrack.streamingMethod = MediaStream.MODE_MEDIACODEC_API
         session!!.configure()
-        startService(Intent(this, RtspServer::class.java))
+        startService(Intent(applicationContext, RtspServer::class.java))
         TransmitterActivity2.sv?.setAspectRatioMode(SurfaceView.ASPECT_RATIO_PREVIEW)
         Log.d("ScreenCaptureService", "Starting session preview")
         session!!.startPreview()

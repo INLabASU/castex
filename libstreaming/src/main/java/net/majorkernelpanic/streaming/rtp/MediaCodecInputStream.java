@@ -71,20 +71,21 @@ public class MediaCodecInputStream extends InputStream {
 					mIndex = mMediaCodec.dequeueOutputBuffer(mBufferInfo, 500000);
 //					Log.d("PreviewTest", "Index: " + mIndex);
 					if (mIndex>=0 ){
-						//Log.d(TAG,"Index: "+mIndex+" Time: "+mBufferInfo.presentationTimeUs+" size: "+mBufferInfo.size);
-						mBuffer = mBuffers[mIndex];
+						Log.d(TAG,"Index: "+mIndex+" Time: "+mBufferInfo.presentationTimeUs+" size: "+mBufferInfo.size);
+						mBuffer = mMediaCodec.getOutputBuffer(mIndex);
 						mBuffer.position(0);
 						break;
 					} else if (mIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
 						mBuffers = mMediaCodec.getOutputBuffers();
+                        Log.i(TAG, "Buffers changed");
 					} else if (mIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
 						mMediaFormat = mMediaCodec.getOutputFormat();
-						Log.i(TAG,mMediaFormat.toString());
+						Log.i(TAG, "Format changed: " + mMediaFormat.toString());
 					} else if (mIndex == MediaCodec.INFO_TRY_AGAIN_LATER) {
 						Log.v(TAG,"No buffer available...");
 						//return 0;
 					} else {
-						Log.e(TAG,"Message: "+mIndex);
+						Log.e(TAG,"Unknown error. Message: "+mIndex);
 						//return 0;
 					}
 				}			
@@ -95,6 +96,7 @@ public class MediaCodecInputStream extends InputStream {
 			min = length < mBufferInfo.size - mBuffer.position() ? length : mBufferInfo.size - mBuffer.position(); 
 			mBuffer.get(buffer, offset, min);
 			if (mBuffer.position()>=mBufferInfo.size) {
+				Log.e(TAG, "Releasing " + mIndex);
 				mMediaCodec.releaseOutputBuffer(mIndex, false);
 				mBuffer = null;
 			}
