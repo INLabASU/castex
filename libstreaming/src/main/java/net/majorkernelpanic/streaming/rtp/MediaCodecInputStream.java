@@ -41,7 +41,7 @@ public class MediaCodecInputStream extends InputStream {
 	private BufferInfo mBufferInfo = new BufferInfo();
 	private ByteBuffer[] mBuffers = null;
 	private ByteBuffer mBuffer = null;
-	private int mIndex = -1;
+	private int mIndex = MediaCodec.INFO_TRY_AGAIN_LATER;
 	private boolean mClosed = false;
 	
 	public MediaFormat mMediaFormat;
@@ -69,6 +69,7 @@ public class MediaCodecInputStream extends InputStream {
 			if (mBuffer==null) {
 				while (!Thread.interrupted() && !mClosed) {
 					mIndex = mMediaCodec.dequeueOutputBuffer(mBufferInfo, 500000);
+//					Log.d("PreviewTest", "Index: " + mIndex);
 					if (mIndex>=0 ){
 						//Log.d(TAG,"Index: "+mIndex+" Time: "+mBufferInfo.presentationTimeUs+" size: "+mBufferInfo.size);
 						mBuffer = mBuffers[mIndex];

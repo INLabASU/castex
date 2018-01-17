@@ -5,6 +5,9 @@ import android.app.*
 import android.content.Intent
 import android.content.Context
 import android.graphics.Color
+import android.hardware.display.DisplayManager
+import android.hardware.display.VirtualDisplay
+import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.net.wifi.WifiManager
 import android.os.Build
@@ -14,22 +17,43 @@ import android.support.v4.app.NotificationCompat
 import android.support.v4.app.NotificationManagerCompat.IMPORTANCE_LOW
 import android.util.DisplayMetrics
 import android.util.Log
+import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+import android.view.WindowManager
 import android.widget.Toast
 import info.jkjensen.castex.R
 import kotlinx.android.synthetic.main.activity_transmitter_2.*
+import net.majorkernelpanic.streaming.MediaStream
+import net.majorkernelpanic.streaming.Session
 import net.majorkernelpanic.streaming.SessionBuilder
+import net.majorkernelpanic.streaming.gl.SurfaceView
 import net.majorkernelpanic.streaming.rtsp.RtspServer
 import net.majorkernelpanic.streaming.video.VideoQuality
+import org.jetbrains.anko.layoutInflater
+import org.jetbrains.anko.mediaProjectionManager
+import org.jetbrains.anko.windowManager
 
 
 /**
  * Created by jk on 1/3/18.
  */
 class ScreenCapturerService: IntentService("ScreenCaptureService") {
+
+    companion object {
+        val MEDIA_PROJECTION_RESULT_CODE = "mediaprojectionresultcode"
+        val MEDIA_PROJECTION_RESULT_DATA = "mediaprojectionresultdata"
+    }
+
+    private val TAG = "ScreenCaptureService"
     private val ONGOING_NOTIFICATION_IDENTIFIER = 1
     private val REQUEST_MEDIA_PROJECTION_CODE = 1
     private val REQUEST_CAMERA_CODE = 200
     private var sessionBuilder:SessionBuilder = SessionBuilder.getInstance()
+
+    private var resultCode: Int = 0
+    private var resultData: Intent? = null
+    private var mediaProjection: MediaProjection? = null
+
+    var session: Session? = null
 
     @TargetApi(Build.VERSION_CODES.O)
     override fun onCreate() {
@@ -56,6 +80,10 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
         super.onCreate()
     }
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        return super.onStartCommand(intent, flags, startId)
+    }
+
     override fun onHandleIntent(intent: Intent?) {
 
         val editor = PreferenceManager.getDefaultSharedPreferences(this).edit()
@@ -71,9 +99,23 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
         val height:Int = displayMetrics.heightPixels
         val width:Int = displayMetrics.widthPixels
 
+        var virtualDisplay: VirtualDisplay? = null
+
+        val layout:SurfaceView = layoutInflater.inflate(R.layout.bg_surface_view, null) as SurfaceView
+        val params = WindowManager.LayoutParams()
+        params.width = WRAP_CONTENT
+        params.height = WRAP_CONTENT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            params.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        }else{
+            params.type = WindowManager.LayoutParams.TYPE_PHONE
+        }
+        (getSystemService(Context.WINDOW_SERVICE) as WindowManager).addView(layout, params)
+
 
         sessionBuilder = sessionBuilder
-//                .setSurfaceView(SurfaceView())
+                .setSurfaceView(TransmitterActivity2.sv)
+//                .setSurfaceView(layout)
                 .setCamera(0)
                 .setPreviewOrientation(90)
                 .setContext(applicationContext)
@@ -96,7 +138,7 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
 //                .setCallback(this)
         sessionBuilder.videoEncoder = SessionBuilder.VIDEO_H264
 
-        val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+//        val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         // This initiates a prompt dialog for the user to confirm screen projection.
 //        startActivityForResult(
 //                mediaProjectionManager.createScreenCaptureIntent(),
@@ -107,8 +149,25 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
 //        }catch (e:InterruptedException){
 //            Thread.currentThread().interrupt()
 //        }
+        val resultCode = intent?.getIntExtra(MEDIA_PROJECTION_RESULT_CODE, 0)
+        val resultData:Intent? = intent?.getParcelableExtra<Intent>(MEDIA_PROJECTION_RESULT_DATA)
+        mediaProjection = mediaProjectionManager.getMediaProjection(resultCode!!, resultData)
 
+        sessionBuilder.setMediaProjection(mediaProjection)
+
+        val metrics: DisplayMetrics = applicationContext.resources.displayMetrics
+        sessionBuilder.setDisplayMetrics(metrics)
+
+        session = sessionBuilder.build()
+        session!!.videoTrack.streamingMethod = MediaStream.MODE_MEDIACODEC_API
+        session!!.configure()
+        startService(Intent(this, RtspServer::class.java))
+        TransmitterActivity2.sv?.setAspectRatioMode(SurfaceView.ASPECT_RATIO_PREVIEW)
+        Log.d("ScreenCaptureService", "Starting session preview")
+        session!!.startPreview()
+
+        while(true);
         Log.d("ScreenCaptureService", "Service complete.")
-        stopSelf()
+//        stopSelf()
     }
 }

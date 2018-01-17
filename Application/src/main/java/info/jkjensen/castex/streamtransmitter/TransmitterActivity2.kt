@@ -13,6 +13,7 @@ import android.content.pm.ActivityInfo
 import android.hardware.display.VirtualDisplay
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
+import android.net.Uri
 import android.view.SurfaceHolder
 import net.majorkernelpanic.streaming.Session
 import android.preference.PreferenceManager
@@ -22,6 +23,7 @@ import android.view.WindowManager
 import net.majorkernelpanic.streaming.video.VideoQuality
 import java.lang.Exception
 import android.net.wifi.WifiManager
+import android.provider.Settings
 import android.util.DisplayMetrics
 import android.widget.Toast
 import info.jkjensen.castex.R
@@ -37,10 +39,12 @@ class TransmitterActivity2 : AppCompatActivity(), SurfaceHolder.Callback, Sessio
         fun testing1(){
             Log.d("tag","somethign")
         }
+        var sv:SurfaceView? = null
     }
 
     private val REQUEST_MEDIA_PROJECTION_CODE = 1
     private val REQUEST_CAMERA_CODE = 200
+    private val REQUEST_OVERLAY_CODE = 201
     private val TAG = "TA2"
 
     private var sessionBuilder:SessionBuilder = SessionBuilder.getInstance()
@@ -84,31 +88,38 @@ class TransmitterActivity2 : AppCompatActivity(), SurfaceHolder.Callback, Sessio
         val height:Int = displayMetrics.heightPixels
         val width:Int = displayMetrics.widthPixels
 
+        sv = surfaceView
 
-        sessionBuilder = sessionBuilder
-                .setSurfaceView(surfaceView)
-                .setCamera(0)
-                .setPreviewOrientation(90)
-                .setContext(applicationContext)
-                .setAudioEncoder(SessionBuilder.AUDIO_NONE)
-                //Supposedly supported resolutions: 1920x1080, 1600x1200, 1440x1080, 1280x960, 1280x768, 1280x720, 1024x768, 800x600, 800x480, 720x480, 640x480, 640x360, 480x640, 480x360, 480x320, 352x288, 320x240, 240x320, 176x144, 160x120, 144x176
 
-//                .setVideoQuality(VideoQuality(320,240,30,2000000)) // Supported
-//                .setVideoQuality(VideoQuality(640,480,30,2000000)) // Supported
-//                .setVideoQuality(VideoQuality(720,480,30,2000000)) // Supported
-//                .setVideoQuality(VideoQuality(800,600,30,2000000)) // Supported
-                .setVideoQuality(VideoQuality(768,1024,30,1000000)) // Supported
-//                .setVideoQuality(VideoQuality(1280,960,4,8000000)) // Supported
-//                .setVideoQuality(VideoQuality(1080,1920,30,8000000)) // Supported
-//                .setDestination("192.168.43.19")// mbp
-//                .setDestination("192.168.43.20")// iMac
-//                .setDestination("192.168.43.19")// mbp
-//                .setDestination("192.168.43.110")// Galaxy s7
-//                .setDestination("192.168.43.6")// OnePlus 5
-//                .setDestination("232.0.1.2") // multicast
-                .setCallback(this)
-        sessionBuilder.videoEncoder = SessionBuilder.VIDEO_H264
+//        sessionBuilder = sessionBuilder
+//                .setSurfaceView(surfaceView)
+//                .setCamera(0)
+//                .setPreviewOrientation(90)
+//                .setContext(applicationContext)
+//                .setAudioEncoder(SessionBuilder.AUDIO_NONE)
+//                //Supposedly supported resolutions: 1920x1080, 1600x1200, 1440x1080, 1280x960, 1280x768, 1280x720, 1024x768, 800x600, 800x480, 720x480, 640x480, 640x360, 480x640, 480x360, 480x320, 352x288, 320x240, 240x320, 176x144, 160x120, 144x176
+//
+////                .setVideoQuality(VideoQuality(320,240,30,2000000)) // Supported
+////                .setVideoQuality(VideoQuality(640,480,30,2000000)) // Supported
+////                .setVideoQuality(VideoQuality(720,480,30,2000000)) // Supported
+////                .setVideoQuality(VideoQuality(800,600,30,2000000)) // Supported
+//                .setVideoQuality(VideoQuality(768,1024,30,1000000)) // Supported
+////                .setVideoQuality(VideoQuality(1280,960,4,8000000)) // Supported
+////                .setVideoQuality(VideoQuality(1080,1920,30,8000000)) // Supported
+////                .setDestination("192.168.43.19")// mbp
+////                .setDestination("192.168.43.20")// iMac
+////                .setDestination("192.168.43.19")// mbp
+////                .setDestination("192.168.43.110")// Galaxy s7
+////                .setDestination("192.168.43.6")// OnePlus 5
+////                .setDestination("232.0.1.2") // multicast
+//                .setCallback(this)
+//        sessionBuilder.videoEncoder = SessionBuilder.VIDEO_H264
 
+        if(!Settings.canDrawOverlays(this)) {
+            val overlayIntent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+            overlayIntent.data = Uri.parse("package:" + packageName)
+            startActivityForResult(overlayIntent, REQUEST_OVERLAY_CODE)
+        }
         val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         // This initiates a prompt dialog for the user to confirm screen projection.
         startActivityForResult(
@@ -124,32 +135,13 @@ class TransmitterActivity2 : AppCompatActivity(), SurfaceHolder.Callback, Sessio
                 Toast.makeText(this, R.string.user_cancelled, Toast.LENGTH_SHORT).show()
                 return
             }
-            val activity = this
-            Log.i(TAG, "Starting screen capture")
-            this.resultCode = resultCode
-            resultData = data
-            mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, resultData)
 
-            sessionBuilder.setMediaProjection(mediaProjection)
-
-            val metrics = DisplayMetrics()
-            windowManager.defaultDisplay.getMetrics(metrics)
-            sessionBuilder.setDisplayMetrics(metrics)
-
-            session = sessionBuilder.build()
-            session!!.videoTrack.streamingMethod = MediaStream.MODE_MEDIACODEC_API
-            surfaceView.setAspectRatioMode(SurfaceView.ASPECT_RATIO_PREVIEW)
-//
-//            val metrics = DisplayMetrics()
-//            windowManager.defaultDisplay.getMetrics(metrics)
-//            val screenDensity = metrics.densityDpi
-//            virtualDisplay = mediaProjection?.createVirtualDisplay("ScreenCapture",
-//                    streamWidth, streamHeight, screenDensity,
-//                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-//                    , null, null)
-            session!!.configure()
-            // Starts the RTSP server
-            startService(Intent(this, RtspServer::class.java))
+            val serviceIntent = Intent(this, ScreenCapturerService::class.java)
+            serviceIntent.putExtra(ScreenCapturerService.MEDIA_PROJECTION_RESULT_CODE, resultCode)
+            serviceIntent.putExtra(ScreenCapturerService.MEDIA_PROJECTION_RESULT_DATA, data)
+            startService(serviceIntent)
+        } else if (requestCode == REQUEST_OVERLAY_CODE){
+            Log.i(TAG, "Got overlay permissions")
         }
     }
 
@@ -161,11 +153,12 @@ class TransmitterActivity2 : AppCompatActivity(), SurfaceHolder.Callback, Sessio
     override fun onStop() {
         super.onStop()
         // Stops the RTSP server
-        stopService(Intent(this, RtspServer::class.java))
+//        stopService(Intent(this, RtspServer::class.java))
+//        stopService(Intent(this, ScreenCapturerService::class.java))
     }
 
     override fun surfaceCreated(p0: SurfaceHolder?) {
-        session!!.startPreview()
+//        session!!.startPreview()
     }
 
     override fun surfaceChanged(p0: SurfaceHolder?, p1: Int, p2: Int, p3: Int) {}
