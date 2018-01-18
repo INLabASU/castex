@@ -45,7 +45,7 @@ class TransmitterActivity2 : AppCompatActivity(), SurfaceHolder.Callback, Sessio
         setContentView(R.layout.activity_transmitter_2)
 
 //        togglebutton.onClick {
-//            // Start stream.
+            // Start stream.
 //            session!!.start()
 //        }
 

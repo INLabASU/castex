@@ -37,6 +37,7 @@
         android:label="@string/app_name">
         <service android:name="net.majorkernelpanic.streaming.rtsp.RtspServer" />
         <service android:name="info.jkjensen.castex.streamtransmitter.ScreenCapturerService" />
+        <receiver android:name=".streamtransmitter.CastexNotificationBroadcastReceiver" />
         <activity
             android:name=".streamreceiver.ReceiverActivity"
             android:label="@string/app_name"

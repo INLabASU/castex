@@ -2,6 +2,7 @@ package info.jkjensen.castex.streamtransmitter
 
 import android.annotation.TargetApi
 import android.app.*
+import android.content.BroadcastReceiver
 import android.content.Intent
 import android.content.Context
 import android.graphics.Color
@@ -44,10 +45,12 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
     companion object {
         val MEDIA_PROJECTION_RESULT_CODE = "mediaprojectionresultcode"
         val MEDIA_PROJECTION_RESULT_DATA = "mediaprojectionresultdata"
+        val STOP_ACTION = "Castex.StopAction"
     }
 
     private val TAG = "ScreenCaptureService"
     private val ONGOING_NOTIFICATION_IDENTIFIER = 1
+
     private val REQUEST_MEDIA_PROJECTION_CODE = 1
     private val REQUEST_CAMERA_CODE = 200
     private var sessionBuilder:SessionBuilder = SessionBuilder.getInstance()
@@ -64,6 +67,10 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
         val notificationIntent = Intent(this, TransmitterActivity2::class.java)
         val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0)
 
+        val stopAction:Intent = Intent()
+        stopAction.action = STOP_ACTION
+        val stopIntent:PendingIntent = PendingIntent.getBroadcast(applicationContext, 12345, stopAction, PendingIntent.FLAG_UPDATE_CURRENT)
+
         val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Notification.Builder(this, CastexNotification.id)
                     .setContentTitle(getText(R.string.notification_title))
@@ -71,6 +78,7 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
                     .setSmallIcon(R.drawable.abc_ic_star_black_16dp)
                     .setContentIntent(pendingIntent)
                     .setTicker(getText(R.string.notification_message))
+                    .addAction(R.id.search_mag_icon, "Stop streaming", stopIntent)
                     .build()
         } else {
             TODO("VERSION.SDK_INT < O")
@@ -128,8 +136,8 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
 
         sessionBuilder = sessionBuilder
                 .setContext(applicationContext)
-                .setSurfaceView(TransmitterActivity2.sv)
-//                .setSurfaceView(svf)
+//                .setSurfaceView(TransmitterActivity2.sv)
+                .setSurfaceView(svf)
                 .setCamera(1)
                 .setPreviewOrientation(90)
                 .setContext(applicationContext)
@@ -180,7 +188,7 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
         Log.d("ScreenCaptureService", "Starting session preview")
         session!!.startPreview()
 
-        while(true);
+//        while(true);
         Log.d("ScreenCaptureService", "Service complete.")
 //        stopSelf()
     }
