@@ -5,6 +5,7 @@ import android.app.*
 import android.content.BroadcastReceiver
 import android.content.Intent
 import android.content.Context
+import android.content.IntentFilter
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
@@ -58,6 +59,7 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
     private var resultCode: Int = 0
     private var resultData: Intent? = null
     private var mediaProjection: MediaProjection? = null
+    private val broadcastReceiver = CastexNotificationBroadcastReceiver()
 
     var session: Session? = null
 
@@ -70,6 +72,7 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
         val stopAction:Intent = Intent()
         stopAction.action = STOP_ACTION
         val stopIntent:PendingIntent = PendingIntent.getBroadcast(applicationContext, 12345, stopAction, PendingIntent.FLAG_UPDATE_CURRENT)
+        val action = Notification.Action.Builder(R.id.search_mag_icon, "Stop streaming", stopIntent).build()
 
         val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Notification.Builder(this, CastexNotification.id)
@@ -78,7 +81,7 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
                     .setSmallIcon(R.drawable.abc_ic_star_black_16dp)
                     .setContentIntent(pendingIntent)
                     .setTicker(getText(R.string.notification_message))
-                    .addAction(R.id.search_mag_icon, "Stop streaming", stopIntent)
+                    .addAction(action)
                     .build()
         } else {
             TODO("VERSION.SDK_INT < O")
@@ -86,13 +89,17 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
 
         startForeground(ONGOING_NOTIFICATION_IDENTIFIER, notification)
         Log.d("ScreenCaptureService", "Service started.")
+        val filter = IntentFilter()
+        filter.addAction(ScreenCapturerService.STOP_ACTION)
+        registerReceiver(broadcastReceiver, filter)
 
-//        Toast.makeText(this, "woo", Toast.LENGTH_LONG).show()
+        Toast.makeText(this, "Sharing screen", Toast.LENGTH_LONG).show()
         super.onCreate()
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        return super.onStartCommand(intent, flags, startId)
+    override fun onDestroy() {
+        unregisterReceiver(broadcastReceiver)
+        super.onDestroy()
     }
 
     override fun onHandleIntent(intent: Intent?) {
@@ -106,26 +113,13 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
         multicastLock.setReferenceCounted(false)
         multicastLock.acquire()
 
-        val displayMetrics: DisplayMetrics = applicationContext.resources.displayMetrics
-        val height:Int = displayMetrics.heightPixels
-        val width:Int = displayMetrics.widthPixels
-
-        var virtualDisplay: VirtualDisplay? = null
 
         val layout:RelativeLayout = layoutInflater.inflate(R.layout.bg_surface_view, null) as RelativeLayout
         val params = WindowManager.LayoutParams(1,1,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
-                PixelFormat.TRANSLUCENT)
-//        val params = WindowManager.LayoutParams()
-//        params.width = 1
-//        params.height = 1
-//        params.format = PixelFormat.TRANSLUCENT
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//            params.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-//        }else{
-//            params.type = WindowManager.LayoutParams.TYPE_PHONE
-//        }
+                PixelFormat.TRANSPARENT)
+
         val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         wm.addView(layout, params)
 
@@ -148,7 +142,10 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
 //                .setVideoQuality(VideoQuality(640,480,30,2000000)) // Supported
 //                .setVideoQuality(VideoQuality(720,480,30,2000000)) // Supported
 //                .setVideoQuality(VideoQuality(800,600,30,2000000)) // Supported
-                .setVideoQuality(VideoQuality(768,1024,30,1000000)) // Supported
+                .setVideoQuality(VideoQuality(TransmitterActivity2.STREAM_WIDTH,
+                        TransmitterActivity2.STREAM_HEIGHT,
+                        TransmitterActivity2.STREAM_FRAMERATE,
+                        TransmitterActivity2.STREAM_BITRATE)) // Supported
 //                .setVideoQuality(VideoQuality(1280,960,4,8000000)) // Supported
 //                .setVideoQuality(VideoQuality(1080,1920,30,8000000)) // Supported
 //                .setDestination("192.168.43.19")// mbp
@@ -160,17 +157,6 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
 //                .setCallback(this)
         sessionBuilder.videoEncoder = SessionBuilder.VIDEO_H264
 
-//        val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        // This initiates a prompt dialog for the user to confirm screen projection.
-//        startActivityForResult(
-//                mediaProjectionManager.createScreenCaptureIntent(),
-//                REQUEST_MEDIA_PROJECTION_CODE)
-
-//        try{
-//            Thread.sleep(5000)
-//        }catch (e:InterruptedException){
-//            Thread.currentThread().interrupt()
-//        }
         val resultCode = intent?.getIntExtra(MEDIA_PROJECTION_RESULT_CODE, 0)
         val resultData:Intent? = intent?.getParcelableExtra<Intent>(MEDIA_PROJECTION_RESULT_DATA)
         mediaProjection = mediaProjectionManager.getMediaProjection(resultCode!!, resultData)
@@ -184,12 +170,12 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
         session!!.videoTrack.streamingMethod = MediaStream.MODE_MEDIACODEC_API
         session!!.configure()
         startService(Intent(applicationContext, RtspServer::class.java))
-        TransmitterActivity2.sv?.setAspectRatioMode(SurfaceView.ASPECT_RATIO_PREVIEW)
         Log.d("ScreenCaptureService", "Starting session preview")
         session!!.startPreview()
 
-//        while(true);
-        Log.d("ScreenCaptureService", "Service complete.")
+        while(true){
+            Thread.sleep(10000)
+        }
 //        stopSelf()
     }
 }

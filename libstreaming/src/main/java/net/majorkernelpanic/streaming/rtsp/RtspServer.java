@@ -340,7 +340,6 @@ public class RtspServer extends Service {
 					break;
 				} catch (IOException e) {
 					Log.e(TAG,e.getMessage());
-					continue;
 				}
 			}
 			Log.i(TAG,"RTSP server stopped !");

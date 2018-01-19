@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
@@ -24,13 +25,13 @@ import net.majorkernelpanic.streaming.rtsp.RtspServer
 import java.lang.Exception
 
 
-class TransmitterActivity2 : AppCompatActivity(), SurfaceHolder.Callback, Session.Callback {
+class TransmitterActivity2 : AppCompatActivity(), Session.Callback {
 
     companion object {
-        fun testing1(){
-            Log.d("tag","somethign")
-        }
-        var sv:SurfaceView? = null
+        val STREAM_WIDTH = 768
+        val STREAM_HEIGHT = 1024
+        val STREAM_FRAMERATE = 30
+        val STREAM_BITRATE = 1000000
     }
 
     private val REQUEST_MEDIA_PROJECTION_CODE = 1
@@ -58,7 +59,6 @@ class TransmitterActivity2 : AppCompatActivity(), SurfaceHolder.Callback, Sessio
         editor.putString(RtspServer.KEY_PORT, 1234.toString())
         editor.commit()
 
-        sv = surfaceView
 
         if(!Settings.canDrawOverlays(this)) {
             val overlayIntent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
@@ -97,18 +97,7 @@ class TransmitterActivity2 : AppCompatActivity(), SurfaceHolder.Callback, Sessio
 
     override fun onStop() {
         super.onStop()
-        // Stops the RTSP server
-//        stopService(Intent(this, RtspServer::class.java))
-//        stopService(Intent(this, ScreenCapturerService::class.java))
     }
-
-    override fun surfaceCreated(p0: SurfaceHolder?) {
-//        session!!.startPreview()
-    }
-
-    override fun surfaceChanged(p0: SurfaceHolder?, p1: Int, p2: Int, p3: Int) {}
-
-    override fun surfaceDestroyed(p0: SurfaceHolder?) {}
 
     override fun onBitrateUpdate(bitrate: Long) {
         Log.d("ServerActivity", "Bitrate update: " + bitrate.toString())

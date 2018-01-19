@@ -71,7 +71,7 @@ public class MediaCodecInputStream extends InputStream {
 					mIndex = mMediaCodec.dequeueOutputBuffer(mBufferInfo, 500000);
 //					Log.d("PreviewTest", "Index: " + mIndex);
 					if (mIndex>=0 ){
-						Log.d(TAG,"Index: "+mIndex+" Time: "+mBufferInfo.presentationTimeUs+" size: "+mBufferInfo.size);
+//						Log.d(TAG,"Index: "+mIndex+" Time: "+mBufferInfo.presentationTimeUs+" size: "+mBufferInfo.size);
 						mBuffer = mMediaCodec.getOutputBuffer(mIndex);
 						mBuffer.position(0);
 						break;
@@ -96,7 +96,7 @@ public class MediaCodecInputStream extends InputStream {
 			min = length < mBufferInfo.size - mBuffer.position() ? length : mBufferInfo.size - mBuffer.position(); 
 			mBuffer.get(buffer, offset, min);
 			if (mBuffer.position()>=mBufferInfo.size) {
-				Log.e(TAG, "Releasing " + mIndex);
+//				Log.e(TAG, "Releasing " + mIndex);
 				mMediaCodec.releaseOutputBuffer(mIndex, false);
 				mBuffer = null;
 			}
