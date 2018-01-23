@@ -174,7 +174,7 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
         session!!.startPreview()
 
         while(true){
-            Thread.sleep(10000)
+            Thread.sleep(1000000)
         }
 //        stopSelf()
     }
