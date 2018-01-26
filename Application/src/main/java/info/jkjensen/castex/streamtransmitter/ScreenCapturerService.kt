@@ -23,6 +23,8 @@ import android.util.Log
 import android.view.SurfaceHolder
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.view.WindowManager
+import android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+import android.view.WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
 import android.widget.RelativeLayout
 import android.widget.Toast
 import info.jkjensen.castex.R
@@ -117,7 +119,7 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
         val layout:RelativeLayout = layoutInflater.inflate(R.layout.bg_surface_view, null) as RelativeLayout
         val params = WindowManager.LayoutParams(1,1,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+                FLAG_WATCH_OUTSIDE_TOUCH or FLAG_NOT_FOCUSABLE,
                 PixelFormat.TRANSPARENT)
 
         val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
