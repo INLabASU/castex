@@ -466,7 +466,7 @@ public abstract class VideoStream extends MediaStream {
 		}
 
 		EncoderDebugger debugger = EncoderDebugger.debug(mSettings, metrics.widthPixels, metrics.heightPixels);
-		final NV21Convertor convertor = debugger.getNV21Convertor();
+//		final NV21Convertor convertor = debugger.getNV21Convertor();
 
 		mMediaCodec = MediaCodec.createByCodecName(debugger.getEncoderName());
 		MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", metrics.widthPixels, metrics.heightPixels);
@@ -474,6 +474,7 @@ public abstract class VideoStream extends MediaStream {
 		mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mQuality.framerate);
 		mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT,debugger.getEncoderColorFormat());
 		mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
+		mediaFormat.setInteger(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, 1000);
 		mMediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
         Surface inputSurface = MediaCodec.createPersistentInputSurface();
         mMediaCodec.setInputSurface(inputSurface);
@@ -481,7 +482,7 @@ public abstract class VideoStream extends MediaStream {
 
         VirtualDisplay virtualDisplay = mediaProjection.createVirtualDisplay("ScreenCapture",
                 metrics.widthPixels, metrics.heightPixels, (int) density,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_PRESENTATION,
                 inputSurface, null, null);
 
 //		Camera.PreviewCallback callback = new Camera.PreviewCallback() {
@@ -700,8 +701,8 @@ public abstract class VideoStream extends MediaStream {
 		parameters.setPreviewFpsRange(max[0], max[1]);
 
 		try {
-//			mCamera.setParameters(parameters);
-//			mCamera.setDisplayOrientation(mOrientation);
+			mCamera.setParameters(parameters);
+			mCamera.setDisplayOrientation(mOrientation);
 			mCamera.startPreview(); // I can't figure out why, but this needs to stay here.
 			mPreviewStarted = true;
 			mUpdated = true;

@@ -1,4 +1,4 @@
-package info.jkjensen.castex.streamtransmitter
+package net.majorkernelpanic.streaming
 
 import android.annotation.TargetApi
 import android.app.NotificationChannel

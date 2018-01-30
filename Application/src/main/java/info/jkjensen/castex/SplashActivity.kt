@@ -3,16 +3,13 @@ package info.jkjensen.castex
 import android.os.Bundle
 import android.app.Activity
 import android.content.Context
-import android.content.Intent
 import android.content.SharedPreferences
 import android.media.MediaPlayer
 import android.net.Uri
-import android.os.Build
 import android.util.Log
 import android.view.SurfaceHolder
 import info.jkjensen.castex.streamreceiver.ReceiverActivity
-import info.jkjensen.castex.streamtransmitter.CastexNotification
-import info.jkjensen.castex.streamtransmitter.ScreenCapturerService
+import net.majorkernelpanic.streaming.CastexNotification
 import info.jkjensen.castex.streamtransmitter.TransmitChooserActivity
 
 import kotlinx.android.synthetic.main.activity_splash.*

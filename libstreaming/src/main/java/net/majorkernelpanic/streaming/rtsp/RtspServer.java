@@ -33,14 +33,21 @@ import java.util.Locale;
 import java.util.WeakHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import net.majorkernelpanic.streaming.CastexNotification;
+import net.majorkernelpanic.streaming.R;
 import net.majorkernelpanic.streaming.Session;
 import net.majorkernelpanic.streaming.SessionBuilder;
+
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Binder;
+import android.os.Build;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.util.Base64;
@@ -96,7 +103,10 @@ public class RtspServer extends Service {
     /** Credentials for Basic Auth */
     private String mUsername;
     private String mPassword;
-	
+
+	private int ONGOING_NOTIFICATION_IDENTIFIER = 1;
+	String STOP_ACTION = "Castex.StopAction";
+
 
 	public RtspServer() {
 	}
@@ -232,6 +242,7 @@ public class RtspServer extends Service {
 	@Override
 	public void onCreate() {
 
+
 		// Let's restore the state of the service 
 		mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 		mPort = Integer.parseInt(mSharedPreferences.getString(KEY_PORT, String.valueOf(mPort)));
@@ -240,6 +251,36 @@ public class RtspServer extends Service {
 		// If the configuration is modified, the server will adjust
 		mSharedPreferences.registerOnSharedPreferenceChangeListener(mOnSharedPreferenceChangeListener);
 
+
+		Intent notificationIntent = new Intent(this, getApplicationContext().getClass());
+		PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+
+
+
+		Intent stopAction = new Intent();
+		stopAction.setAction(STOP_ACTION);
+		PendingIntent stopIntent = PendingIntent.getBroadcast(getApplicationContext(), 12345, stopAction, PendingIntent.FLAG_UPDATE_CURRENT);
+        Notification.Action action = null;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT_WATCH) {
+            action = new Notification.Action.Builder(R.drawable.ic_fiber_manual_record_black_24dp, "Stop streaming", stopIntent).build();
+        }
+
+        Notification notification = new Notification();
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+		notification =
+                (new Notification.Builder(this, CastexNotification.Companion.getId()))
+                    .setContentTitle(getText(R.string.notification_title))
+					.setContentText(getText(R.string.notification_message))
+					.setSmallIcon(R.drawable.ic_fiber_manual_record_black_24dp)
+					.setContentIntent(pendingIntent)
+					.setTicker(getText(R.string.notification_message))
+					.addAction(action)
+					.build();
+		} else {
+//			TODO("VERSION.SDK_INT < O");
+		}
+
+		startForeground(ONGOING_NOTIFICATION_IDENTIFIER, notification);
 		start();
 	}
 

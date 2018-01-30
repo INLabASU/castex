@@ -67,29 +67,29 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
 
     @TargetApi(Build.VERSION_CODES.O)
     override fun onCreate() {
-
-        val notificationIntent = Intent(this, TransmitterActivity2::class.java)
-        val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0)
-
-        val stopAction:Intent = Intent()
-        stopAction.action = STOP_ACTION
-        val stopIntent:PendingIntent = PendingIntent.getBroadcast(applicationContext, 12345, stopAction, PendingIntent.FLAG_UPDATE_CURRENT)
-        val action = Notification.Action.Builder(R.id.search_mag_icon, "Stop streaming", stopIntent).build()
-
-        val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Notification.Builder(this, CastexNotification.id)
-                    .setContentTitle(getText(R.string.notification_title))
-                    .setContentText(getText(R.string.notification_message))
-                    .setSmallIcon(R.drawable.abc_ic_star_black_16dp)
-                    .setContentIntent(pendingIntent)
-                    .setTicker(getText(R.string.notification_message))
-                    .addAction(action)
-                    .build()
-        } else {
-            TODO("VERSION.SDK_INT < O")
-        }
-
-        startForeground(ONGOING_NOTIFICATION_IDENTIFIER, notification)
+//
+//        val notificationIntent = Intent(this, TransmitterActivity2::class.java)
+//        val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0)
+//
+//        val stopAction:Intent = Intent()
+//        stopAction.action = STOP_ACTION
+//        val stopIntent:PendingIntent = PendingIntent.getBroadcast(applicationContext, 12345, stopAction, PendingIntent.FLAG_UPDATE_CURRENT)
+//        val action = Notification.Action.Builder(R.id.search_mag_icon, "Stop streaming", stopIntent).build()
+//
+//        val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//            Notification.Builder(this, CastexNotification.id)
+//                    .setContentTitle(getText(R.string.notification_title))
+//                    .setContentText(getText(R.string.notification_message))
+//                    .setSmallIcon(R.drawable.abc_ic_star_black_16dp)
+//                    .setContentIntent(pendingIntent)
+//                    .setTicker(getText(R.string.notification_message))
+//                    .addAction(action)
+//                    .build()
+//        } else {
+//            TODO("VERSION.SDK_INT < O")
+//        }
+//
+//        startForeground(ONGOING_NOTIFICATION_IDENTIFIER, notification)
         Log.d("ScreenCaptureService", "Service started.")
         val filter = IntentFilter()
         filter.addAction(ScreenCapturerService.STOP_ACTION)
