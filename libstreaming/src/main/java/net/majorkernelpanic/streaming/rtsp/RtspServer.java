@@ -34,12 +34,11 @@ import java.util.WeakHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import net.majorkernelpanic.streaming.CastexNotification;
+import net.majorkernelpanic.streaming.ScreenRecordNotification;
 import net.majorkernelpanic.streaming.R;
 import net.majorkernelpanic.streaming.Session;
 import net.majorkernelpanic.streaming.SessionBuilder;
 
-import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
@@ -47,9 +46,9 @@ import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Binder;
-import android.os.Build;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
+import android.support.v4.app.NotificationCompat;
 import android.util.Base64;
 import android.util.Log;
 
@@ -260,27 +259,18 @@ public class RtspServer extends Service {
 		Intent stopAction = new Intent();
 		stopAction.setAction(STOP_ACTION);
 		PendingIntent stopIntent = PendingIntent.getBroadcast(getApplicationContext(), 12345, stopAction, PendingIntent.FLAG_UPDATE_CURRENT);
-        Notification.Action action = null;
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT_WATCH) {
-            action = new Notification.Action.Builder(R.drawable.ic_fiber_manual_record_black_24dp, "Stop streaming", stopIntent).build();
-        }
+        NotificationCompat.Action action = new NotificationCompat.Action.Builder(R.drawable.ic_fiber_manual_record_black_24dp, "Stop streaming", stopIntent).build();
 
-        Notification notification = new Notification();
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-		notification =
-                (new Notification.Builder(this, CastexNotification.Companion.getId()))
-                    .setContentTitle(getText(R.string.notification_title))
-					.setContentText(getText(R.string.notification_message))
-					.setSmallIcon(R.drawable.ic_fiber_manual_record_black_24dp)
-					.setContentIntent(pendingIntent)
-					.setTicker(getText(R.string.notification_message))
-					.addAction(action)
-					.build();
-		} else {
-//			TODO("VERSION.SDK_INT < O");
-		}
+        NotificationCompat.Builder builder =
+			(new NotificationCompat.Builder(this, ScreenRecordNotification.Companion.getId()))
+				.setContentTitle(getText(R.string.notification_title))
+				.setContentText(getText(R.string.notification_message))
+				.setSmallIcon(R.drawable.ic_fiber_manual_record_black_24dp)
+				.setContentIntent(pendingIntent)
+				.setTicker(getText(R.string.notification_message))
+				.addAction(action);
 
-		startForeground(ONGOING_NOTIFICATION_IDENTIFIER, notification);
+		startForeground(ONGOING_NOTIFICATION_IDENTIFIER, builder.build());
 		start();
 	}
 

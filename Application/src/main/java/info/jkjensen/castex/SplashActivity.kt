@@ -9,7 +9,6 @@ import android.net.Uri
 import android.util.Log
 import android.view.SurfaceHolder
 import info.jkjensen.castex.streamreceiver.ReceiverActivity
-import net.majorkernelpanic.streaming.CastexNotification
 import info.jkjensen.castex.streamtransmitter.TransmitChooserActivity
 
 import kotlinx.android.synthetic.main.activity_splash.*
@@ -32,9 +31,6 @@ class SplashActivity : Activity(), SurfaceHolder.Callback {
 //        val path = "android.resource://" + packageName + "/" + R.raw.waves
         //Set up app settings
         initAppPreferences()
-
-        // Create a notification channel for the recording process
-        CastexNotification(this).buildChannel()
 
         holder = videoView.holder
         holder?.addCallback(this)

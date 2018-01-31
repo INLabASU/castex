@@ -2,33 +2,24 @@ package info.jkjensen.castex.streamtransmitter
 
 import android.annotation.TargetApi
 import android.app.*
-import android.content.BroadcastReceiver
 import android.content.Intent
 import android.content.Context
 import android.content.IntentFilter
-import android.graphics.Color
 import android.graphics.PixelFormat
-import android.hardware.display.DisplayManager
-import android.hardware.display.VirtualDisplay
 import android.media.projection.MediaProjection
-import android.media.projection.MediaProjectionManager
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.preference.PreferenceManager
-import android.support.v4.app.ActivityCompat.startActivityForResult
-import android.support.v4.app.NotificationCompat
-import android.support.v4.app.NotificationManagerCompat.IMPORTANCE_LOW
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.SurfaceHolder
-import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.view.WindowManager
 import android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
 import android.view.WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
 import android.widget.RelativeLayout
 import android.widget.Toast
 import info.jkjensen.castex.R
-import kotlinx.android.synthetic.main.activity_transmitter_2.*
+import net.majorkernelpanic.streaming.ScreenRecordNotification
 import net.majorkernelpanic.streaming.MediaStream
 import net.majorkernelpanic.streaming.Session
 import net.majorkernelpanic.streaming.SessionBuilder
@@ -37,7 +28,6 @@ import net.majorkernelpanic.streaming.rtsp.RtspServer
 import net.majorkernelpanic.streaming.video.VideoQuality
 import org.jetbrains.anko.layoutInflater
 import org.jetbrains.anko.mediaProjectionManager
-import org.jetbrains.anko.windowManager
 
 
 /**
@@ -67,29 +57,10 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
 
     @TargetApi(Build.VERSION_CODES.O)
     override fun onCreate() {
-//
-//        val notificationIntent = Intent(this, TransmitterActivity2::class.java)
-//        val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0)
-//
-//        val stopAction:Intent = Intent()
-//        stopAction.action = STOP_ACTION
-//        val stopIntent:PendingIntent = PendingIntent.getBroadcast(applicationContext, 12345, stopAction, PendingIntent.FLAG_UPDATE_CURRENT)
-//        val action = Notification.Action.Builder(R.id.search_mag_icon, "Stop streaming", stopIntent).build()
-//
-//        val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//            Notification.Builder(this, CastexNotification.id)
-//                    .setContentTitle(getText(R.string.notification_title))
-//                    .setContentText(getText(R.string.notification_message))
-//                    .setSmallIcon(R.drawable.abc_ic_star_black_16dp)
-//                    .setContentIntent(pendingIntent)
-//                    .setTicker(getText(R.string.notification_message))
-//                    .addAction(action)
-//                    .build()
-//        } else {
-//            TODO("VERSION.SDK_INT < O")
-//        }
-//
-//        startForeground(ONGOING_NOTIFICATION_IDENTIFIER, notification)
+
+        // Create a notification channel for the recording process
+        ScreenRecordNotification(this).buildChannel()
+
         Log.d("ScreenCaptureService", "Service started.")
         val filter = IntentFilter()
         filter.addAction(ScreenCapturerService.STOP_ACTION)

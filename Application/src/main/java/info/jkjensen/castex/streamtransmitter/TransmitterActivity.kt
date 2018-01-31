@@ -307,7 +307,6 @@ class TransmitterActivity : AppCompatActivity(), View.OnClickListener {
                 Toast.makeText(this, R.string.user_cancelled, Toast.LENGTH_SHORT).show()
                 return
             }
-            val activity = this
             Log.i(TAG, "Starting screen capture")
             mResultCode = resultCode
             mResultData = data

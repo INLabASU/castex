@@ -11,11 +11,11 @@ import android.os.Build
 /**
  * Created by jk on 1/9/18.
  */
-class CastexNotification(context:Context) {
+class ScreenRecordNotification(context:Context) {
 
     companion object {
-        val id = "info.jkjensen.castex.streamtransmitter"
-        val name = "castex"
+        val id = "net.majorkernelpanic.streaming.ScreenRecordNotification"
+        val name = "Screen Recording"
         val description = "Some description"
     }
 
@@ -25,14 +25,16 @@ class CastexNotification(context:Context) {
 
 
     fun buildChannel(){
-        channel = NotificationChannel(id, name, importance)
-        channel!!.description = description
-        channel!!.enableLights(true)
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            channel = NotificationChannel(id, name, importance)
+            channel!!.description = description
+            channel!!.enableLights(true)
 
-        channel!!.lightColor = Color.RED
-        channel!!.enableVibration(false)
-        channel!!.setSound(null, null)
+            channel!!.lightColor = Color.RED
+            channel!!.enableVibration(false)
+            channel!!.setSound(null, null)
 //        channel!!.vibrationPattern = LongArray(0)
-        notificationManager.createNotificationChannel(channel)
+            notificationManager.createNotificationChannel(channel)
+        }
     }
 }
