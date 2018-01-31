@@ -259,13 +259,13 @@ public class RtspServer extends Service {
 		Intent stopAction = new Intent();
 		stopAction.setAction(STOP_ACTION);
 		PendingIntent stopIntent = PendingIntent.getBroadcast(getApplicationContext(), 12345, stopAction, PendingIntent.FLAG_UPDATE_CURRENT);
-        NotificationCompat.Action action = new NotificationCompat.Action.Builder(R.drawable.ic_fiber_manual_record_black_24dp, "Stop streaming", stopIntent).build();
+        NotificationCompat.Action action = new NotificationCompat.Action.Builder(R.drawable.notification_animated, "Stop streaming", stopIntent).build();
 
         NotificationCompat.Builder builder =
 			(new NotificationCompat.Builder(this, ScreenRecordNotification.Companion.getId()))
 				.setContentTitle(getText(R.string.notification_title))
 				.setContentText(getText(R.string.notification_message))
-				.setSmallIcon(R.drawable.ic_fiber_manual_record_black_24dp)
+				.setSmallIcon(R.drawable.notification_animated)
 				.setContentIntent(pendingIntent)
 				.setTicker(getText(R.string.notification_message))
 				.addAction(action);

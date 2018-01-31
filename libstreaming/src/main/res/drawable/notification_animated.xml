@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--<animated-vector xmlns:tools="http://schemas.android.com/tools"-->
+    <!--xmlns:android="http://schemas.android.com/apk/res/android"-->
+    <!--android:drawable="@drawable/record_animated"-->
+    <!--tools:targetApi="lollipop">-->
+
+    <!--<target-->
+        <!--android:animation="@animator/clockwise_rotation"-->
+        <!--android:name="rotation" />-->
+<!--</animated-vector>-->
+
+<animation-list
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:oneshot="false">
+    <item android:drawable="@drawable/ic_fiber_manual_record_black_24dp" android:duration="17" />
+    <item android:drawable="@drawable/ic_fiber_manual_record_black_24dp" android:duration="17" />
+</animation-list>
