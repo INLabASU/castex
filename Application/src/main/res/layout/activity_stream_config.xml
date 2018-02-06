@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#123"
+    tools:context="info.jkjensen.castex.streamtransmitter.StreamConfigActivity">
+
+
+
+    <TextView
+        android:id="@+id/instructions"
+        android:background="#c000"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="18dp"
+        android:padding="12dp"
+        android:textAlignment="center"
+        android:text="who do you want to share with?"
+        android:textColor="#fff"
+        android:gravity="center"
+        android:textSize="18sp"
+        android:drawablePadding="16dp"
+        android:layout_marginTop="12dp"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:id="@+id/targetList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/instructions"
+        />
+
+    <Button
+        android:id="@+id/startStreamButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="start stream"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_margin="8dp"
+        android:padding="12dp"
+        android:background="#c000"
+        android:textColor="#fff"
+        />
+
+</android.support.constraint.ConstraintLayout>
