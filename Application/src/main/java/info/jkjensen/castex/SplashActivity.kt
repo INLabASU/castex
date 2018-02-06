@@ -1,5 +1,6 @@
 package info.jkjensen.castex
 
+import android.Manifest
 import android.os.Bundle
 import android.app.Activity
 import android.content.Context
@@ -8,6 +9,8 @@ import android.content.SharedPreferences
 import android.media.MediaPlayer
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
+import android.provider.Settings
+import android.support.v4.app.ActivityCompat
 import android.util.Log
 import android.view.SurfaceHolder
 import android.widget.Toast
@@ -31,6 +34,7 @@ class SplashActivity : Activity(), SurfaceHolder.Callback {
 
     private val REQUEST_MEDIA_PROJECTION_CODE = 1
     private val REQUEST_OVERLAY_CODE = 201
+    private val REQUEST_CAMERA_CODE = 200
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,6 +46,14 @@ class SplashActivity : Activity(), SurfaceHolder.Callback {
 
         holder = videoView.holder
         holder?.addCallback(this)
+
+        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), REQUEST_CAMERA_CODE)
+
+        if(!Settings.canDrawOverlays(this)) {
+            val overlayIntent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+            overlayIntent.data = Uri.parse("package:" + packageName)
+            startActivityForResult(overlayIntent, REQUEST_OVERLAY_CODE)
+        }
 
         broadcastButton.setOnClickListener {
 
