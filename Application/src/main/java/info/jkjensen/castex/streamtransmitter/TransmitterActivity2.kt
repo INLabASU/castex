@@ -60,11 +60,11 @@ class TransmitterActivity2 : AppCompatActivity(), Session.Callback {
         editor.commit()
 
 
-        if(!Settings.canDrawOverlays(this)) {
-            val overlayIntent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-            overlayIntent.data = Uri.parse("package:" + packageName)
-            startActivityForResult(overlayIntent, REQUEST_OVERLAY_CODE)
-        }
+//        if(!Settings.canDrawOverlays(this)) {
+//            val overlayIntent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+//            overlayIntent.data = Uri.parse("package:" + packageName)
+//            startActivityForResult(overlayIntent, REQUEST_OVERLAY_CODE)
+//        }
         val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         // This initiates a prompt dialog for the user to confirm screen projection.
         startActivityForResult(

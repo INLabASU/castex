@@ -3,12 +3,16 @@ package info.jkjensen.castex
 import android.os.Bundle
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.media.MediaPlayer
+import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.util.Log
 import android.view.SurfaceHolder
+import android.widget.Toast
 import info.jkjensen.castex.streamreceiver.ReceiverActivity
+import info.jkjensen.castex.streamtransmitter.ScreenCapturerService
 import info.jkjensen.castex.streamtransmitter.TransmitChooserActivity
 
 import kotlinx.android.synthetic.main.activity_splash.*
@@ -19,10 +23,14 @@ import java.util.*
 
 
 class SplashActivity : Activity(), SurfaceHolder.Callback {
+    private val TAG = "SplashActivity"
 
     //    private var videoView = null
     private var holder:SurfaceHolder? = null
     private var mediaPlayer:MediaPlayer? = MediaPlayer()
+
+    private val REQUEST_MEDIA_PROJECTION_CODE = 1
+    private val REQUEST_OVERLAY_CODE = 201
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,7 +44,13 @@ class SplashActivity : Activity(), SurfaceHolder.Callback {
         holder?.addCallback(this)
 
         broadcastButton.setOnClickListener {
-            startActivity<TransmitChooserActivity>()
+
+            val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            // This initiates a prompt dialog for the user to confirm screen projection.
+            startActivityForResult(
+                    mediaProjectionManager.createScreenCaptureIntent(),
+                    REQUEST_MEDIA_PROJECTION_CODE)
+//            startActivity<TransmitChooserActivity>()
 //            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 //                startForegroundService(Intent(this, ScreenCapturerService::class.java))
 //            }
@@ -46,6 +60,23 @@ class SplashActivity : Activity(), SurfaceHolder.Callback {
             startActivity<ReceiverActivity>()
         }
         logNetworkInterfaces()
+    }
+
+    public override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == REQUEST_MEDIA_PROJECTION_CODE) {
+            if (resultCode != Activity.RESULT_OK) {
+                Log.i(TAG, "User cancelled")
+                Toast.makeText(this, R.string.user_cancelled, Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val serviceIntent = Intent(this, ScreenCapturerService::class.java)
+            serviceIntent.putExtra(ScreenCapturerService.MEDIA_PROJECTION_RESULT_CODE, resultCode)
+            serviceIntent.putExtra(ScreenCapturerService.MEDIA_PROJECTION_RESULT_DATA, data)
+            startService(serviceIntent)
+        } else if (requestCode == REQUEST_OVERLAY_CODE){
+            Log.i(TAG, "Got overlay permissions")
+        }
     }
 
     fun initAppPreferences(){
