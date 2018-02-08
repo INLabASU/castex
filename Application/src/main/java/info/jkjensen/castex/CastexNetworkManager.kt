@@ -3,15 +3,18 @@ package info.jkjensen.castex
 import android.content.IntentFilter
 import android.net.wifi.p2p.WifiP2pManager
 import android.os.Bundle
+import android.os.Looper
 
 
 /**
  * Created by jk on 2/6/18.
+ * initialize() must have been called on p2pManager before passing it in.
  */
-class CastexNetworkManager {
-    private val intentFilter = IntentFilter()
+class CastexNetworkManager(val p2pManager: WifiP2pManager) {
+    val intentFilter = IntentFilter()
 
     init {
+
         // Indicates a change in the Wi-Fi P2P status.
         intentFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
 

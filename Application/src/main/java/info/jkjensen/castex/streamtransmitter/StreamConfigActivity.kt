@@ -6,13 +6,16 @@ import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
+import android.net.wifi.p2p.WifiP2pManager
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Looper
 import android.preference.PreferenceManager
 import android.provider.Settings
 import android.support.v4.app.ActivityCompat
 import android.util.Log
 import android.widget.Toast
+import info.jkjensen.castex.CastexNetworkManager
 import info.jkjensen.castex.R
 import kotlinx.android.synthetic.main.activity_stream_config.*
 import net.majorkernelpanic.streaming.rtsp.RtspServer
@@ -44,6 +47,10 @@ class StreamConfigActivity : AppCompatActivity() {
                 overlayIntent.data = Uri.parse("package:" + packageName)
                 startActivityForResult(overlayIntent, REQUEST_OVERLAY_CODE)
             }
+
+            val p2pManager:WifiP2pManager = getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager
+            p2pManager.initialize(applicationContext, Looper.getMainLooper(), null)
+            val networkManager = CastexNetworkManager(p2pManager)
 
             val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             // This initiates a prompt dialog for the user to confirm screen projection.
