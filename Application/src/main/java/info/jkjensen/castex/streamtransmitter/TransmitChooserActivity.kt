@@ -1,3 +1,5 @@
+@file:Suppress("EXPERIMENTAL_FEATURE_WARNING")
+
 package info.jkjensen.castex.streamtransmitter
 
 import android.content.Intent
