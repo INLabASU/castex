@@ -49,8 +49,8 @@ class StreamConfigActivity : AppCompatActivity() {
             }
 
             val p2pManager:WifiP2pManager = getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager
-            p2pManager.initialize(applicationContext, Looper.getMainLooper(), null)
-            val networkManager = CastexNetworkManager(p2pManager)
+            val channel: WifiP2pManager.Channel = p2pManager.initialize(applicationContext, Looper.getMainLooper(), null)
+            val networkManager = CastexNetworkManager(channel)
 
             val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             // This initiates a prompt dialog for the user to confirm screen projection.

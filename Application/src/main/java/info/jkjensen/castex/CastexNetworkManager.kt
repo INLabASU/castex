@@ -10,7 +10,7 @@ import android.os.Looper
  * Created by jk on 2/6/18.
  * initialize() must have been called on p2pManager before passing it in.
  */
-class CastexNetworkManager(val p2pManager: WifiP2pManager) {
+class CastexNetworkManager(val channel: WifiP2pManager.Channel) {
     val intentFilter = IntentFilter()
 
     init {
