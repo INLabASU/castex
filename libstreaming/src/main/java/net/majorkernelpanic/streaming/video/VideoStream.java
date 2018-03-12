@@ -480,6 +480,7 @@ public abstract class VideoStream extends MediaStream {
         mMediaCodec.setInputSurface(inputSurface);
         mMediaCodec.start();
 
+
         VirtualDisplay virtualDisplay = mediaProjection.createVirtualDisplay("ScreenCapture",
                 metrics.widthPixels, metrics.heightPixels, (int) density,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_PRESENTATION,

@@ -21,6 +21,7 @@ import android.util.Log
 import android.widget.Toast
 import info.jkjensen.castex.R
 import kotlinx.android.synthetic.main.activity_stream_config.*
+import org.jetbrains.anko.mediaProjectionManager
 import org.jetbrains.anko.sdk25.coroutines.onClick
 
 class StreamConfigActivity : AppCompatActivity() {
@@ -56,7 +57,6 @@ class StreamConfigActivity : AppCompatActivity() {
             val channel: WifiP2pManager.Channel = p2pManager.initialize(applicationContext, Looper.getMainLooper(), null)
             networkManager = CastexNetworkManager(channel)
 
-            val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             // This initiates a prompt dialog for the user to confirm screen projection.
             startActivityForResult(
                     mediaProjectionManager.createScreenCaptureIntent(),
