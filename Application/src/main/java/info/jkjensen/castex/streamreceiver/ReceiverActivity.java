@@ -431,7 +431,7 @@ public class ReceiverActivity extends Activity implements TextureView.SurfaceTex
         private int pFrameCount = 0;
         private int pFrameAverage = 0;
 
-        public PacketReceiverTask(){
+        PacketReceiverTask(){
         }
 
         @Override
